@@ -3,7 +3,12 @@ import { useState, useEffect } from 'react';
 export default function SeccionCentral() {
   const [noticias, setNoticias] = useState([]);
   const [modoAdmin, setModoAdmin] = useState(false);
-  const [clicks, setClicks] = useState(0);
+  const [mostrarLogin, setMostrarLogin] = useState(false);
+  const [password, setPassword] = useState('');
+  const [errorPassword, setErrorPassword] = useState('');
+
+  // CONTRASEÑA PARA ADMIN (CÁMBiala por la que quieras)
+  const ADMIN_PASSWORD = 'prototipica2026';
 
   useEffect(() => {
     const datos = localStorage.getItem('noticiasPrototipica');
@@ -49,13 +54,27 @@ export default function SeccionCentral() {
   };
 
   const handleTituloClick = () => {
-    const nuevos = clicks + 1;
-    setClicks(nuevos);
-    if (nuevos >= 5) {
-      setModoAdmin(!modoAdmin);
-      setClicks(0);
+    setMostrarLogin(true);
+    setPassword('');
+    setErrorPassword('');
+  };
+
+  const handleLogin = () => {
+    if (password === ADMIN_PASSWORD) {
+      setModoAdmin(true);
+      setMostrarLogin(false);
+      setPassword('');
+      setErrorPassword('');
+    } else {
+      setErrorPassword('❌ Contraseña incorrecta');
     }
-    setTimeout(() => setClicks(0), 3000);
+  };
+
+  const cerrarAdmin = () => {
+    setModoAdmin(false);
+    setMostrarLogin(false);
+    setPassword('');
+    setErrorPassword('');
   };
 
   return (
@@ -71,6 +90,7 @@ export default function SeccionCentral() {
           alignItems: 'center',
           gap: '1rem'
         }}
+        title="Haz clic para acceder al panel de administración"
       >
         📰 Noticias
         {modoAdmin && (
@@ -86,8 +106,92 @@ export default function SeccionCentral() {
         )}
       </h2>
 
-      {clicks > 0 && (
-        <span style={{ fontSize: '0.8rem', color: '#999' }}>{clicks}/5</span>
+      {/* MODAL DE LOGIN */}
+      {mostrarLogin && !modoAdmin && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            maxWidth: '400px',
+            width: '100%',
+            padding: '2rem',
+            textAlign: 'center'
+          }}>
+            <h3 style={{ marginBottom: '1rem' }}>🔒 Acceso de administrador</h3>
+            <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+              Ingresa la contraseña para administrar las noticias.
+            </p>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Contraseña..."
+              style={{
+                width: '100%',
+                padding: '0.8rem',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                marginBottom: '0.8rem',
+                fontSize: '1rem'
+              }}
+              onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+            />
+            {errorPassword && (
+              <p style={{ color: '#c62828', fontSize: '0.9rem', marginBottom: '0.8rem' }}>
+                {errorPassword}
+              </p>
+            )}
+            <div style={{ display: 'flex', gap: '0.8rem' }}>
+              <button
+                onClick={handleLogin}
+                style={{
+                  flex: 1,
+                  background: '#1a1a1a',
+                  color: 'white',
+                  padding: '0.8rem',
+                  border: 'none',
+                  borderRadius: '40px',
+                  cursor: 'pointer',
+                  fontSize: '1rem'
+                }}
+              >
+                Ingresar
+              </button>
+              <button
+                onClick={() => {
+                  setMostrarLogin(false);
+                  setPassword('');
+                  setErrorPassword('');
+                }}
+                style={{
+                  flex: 1,
+                  background: '#eee',
+                  color: '#333',
+                  padding: '0.8rem',
+                  border: 'none',
+                  borderRadius: '40px',
+                  cursor: 'pointer',
+                  fontSize: '1rem'
+                }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {modoAdmin && (
@@ -100,7 +204,7 @@ export default function SeccionCentral() {
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
             <h3>✏️ Editor de Noticias</h3>
-            <button onClick={() => setModoAdmin(false)} style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}>
+            <button onClick={cerrarAdmin} style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}>
               Cerrar
             </button>
           </div>
@@ -152,27 +256,27 @@ export default function SeccionCentral() {
         </div>
       )}
 
-      {noticias.length === 0 ? (
+      {noticias.length === 0 && !modoAdmin && (
         <div style={{ textAlign: 'center', padding: '3rem', color: '#999' }}>
           <p>📭 No hay noticias</p>
-          <p style={{ fontSize: '0.9rem' }}>Haz clic 5 veces en "Noticias" para agregar</p>
+          <p style={{ fontSize: '0.9rem' }}>Haz clic en "Noticias" para acceder al panel de administración</p>
         </div>
-      ) : (
-        noticias.map(nota => (
-          <div key={nota.id} style={{ borderBottom: '1px solid #eee', padding: '1.5rem 0' }}>
-            {nota.imagen && (
-              <img src={nota.imagen} alt={nota.titulo} style={{ width: '100%', maxHeight: '300px', objectFit: 'cover', borderRadius: '8px', marginBottom: '1rem' }} />
-            )}
-            {nota.video && (
-              <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, marginBottom: '1rem' }}>
-                <iframe src={nota.video} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen title={nota.titulo} />
-              </div>
-            )}
-            <h3 style={{ fontSize: '1.5rem', fontWeight: '400' }}>{nota.titulo}</h3>
-            <p style={{ color: '#555', lineHeight: '1.8' }}>{nota.contenido}</p>
-          </div>
-        ))
       )}
+
+      {noticias.map(nota => (
+        <div key={nota.id} style={{ borderBottom: '1px solid #eee', padding: '1.5rem 0' }}>
+          {nota.imagen && (
+            <img src={nota.imagen} alt={nota.titulo} style={{ width: '100%', maxHeight: '300px', objectFit: 'cover', borderRadius: '8px', marginBottom: '1rem' }} />
+          )}
+          {nota.video && (
+            <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, marginBottom: '1rem' }}>
+              <iframe src={nota.video} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen title={nota.titulo} />
+            </div>
+          )}
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '400' }}>{nota.titulo}</h3>
+          <p style={{ color: '#555', lineHeight: '1.8' }}>{nota.contenido}</p>
+        </div>
+      ))}
     </div>
   );
 }

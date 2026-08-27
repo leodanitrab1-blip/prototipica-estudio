@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 
-// Tu clave pública de Stripe
 const STRIPE_PUBLIC_KEY = 'pk_live_51U92vNBaY3CV3QUxUdcDY3Flu9HKKwX5qPtlrk3v3aJE2Ocm4HoEhRfCXKjvWu4XVIys1nzZhcdAivgg0OaQYhim00AIhSEiky';
 
 export default function TiendaSoftware() {
   const [productos, setProductos] = useState([]);
   const [modoAdmin, setModoAdmin] = useState(false);
-  const [clicks, setClicks] = useState(0);
+  const [mostrarLogin, setMostrarLogin] = useState(false);
+  const [password, setPassword] = useState('');
+  const [errorPassword, setErrorPassword] = useState('');
   const [cargandoPago, setCargandoPago] = useState(false);
+
+  const ADMIN_PASSWORD = 'prototipica2026';
 
   useEffect(() => {
     const datos = localStorage.getItem('softwarePrototipica');
@@ -55,16 +58,29 @@ export default function TiendaSoftware() {
   };
 
   const handleTituloClick = () => {
-    const nuevos = clicks + 1;
-    setClicks(nuevos);
-    if (nuevos >= 5) {
-      setModoAdmin(!modoAdmin);
-      setClicks(0);
-    }
-    setTimeout(() => setClicks(0), 3000);
+    setMostrarLogin(true);
+    setPassword('');
+    setErrorPassword('');
   };
 
-  // Función para manejar el pago con Stripe
+  const handleLogin = () => {
+    if (password === ADMIN_PASSWORD) {
+      setModoAdmin(true);
+      setMostrarLogin(false);
+      setPassword('');
+      setErrorPassword('');
+    } else {
+      setErrorPassword('❌ Contraseña incorrecta');
+    }
+  };
+
+  const cerrarAdmin = () => {
+    setModoAdmin(false);
+    setMostrarLogin(false);
+    setPassword('');
+    setErrorPassword('');
+  };
+
   const manejarPago = async (producto) => {
     setCargandoPago(true);
     
@@ -112,6 +128,7 @@ export default function TiendaSoftware() {
             cursor: 'pointer',
             userSelect: 'none'
           }}
+          title="Haz clic para acceder al panel de administración"
         >
           🛠️ MarketSoft
           {modoAdmin && (
@@ -129,7 +146,93 @@ export default function TiendaSoftware() {
         </h2>
       </div>
 
-      {clicks > 0 && <span style={{ fontSize: '0.8rem', color: '#999' }}>{clicks}/5</span>}
+      {/* MODAL DE LOGIN */}
+      {mostrarLogin && !modoAdmin && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            maxWidth: '400px',
+            width: '100%',
+            padding: '2rem',
+            textAlign: 'center'
+          }}>
+            <h3 style={{ marginBottom: '1rem' }}>🔒 Acceso de administrador</h3>
+            <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+              Ingresa la contraseña para administrar los productos.
+            </p>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Contraseña..."
+              style={{
+                width: '100%',
+                padding: '0.8rem',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                marginBottom: '0.8rem',
+                fontSize: '1rem'
+              }}
+              onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+            />
+            {errorPassword && (
+              <p style={{ color: '#c62828', fontSize: '0.9rem', marginBottom: '0.8rem' }}>
+                {errorPassword}
+              </p>
+            )}
+            <div style={{ display: 'flex', gap: '0.8rem' }}>
+              <button
+                onClick={handleLogin}
+                style={{
+                  flex: 1,
+                  background: '#1a1a1a',
+                  color: 'white',
+                  padding: '0.8rem',
+                  border: 'none',
+                  borderRadius: '40px',
+                  cursor: 'pointer',
+                  fontSize: '1rem'
+                }}
+              >
+                Ingresar
+              </button>
+              <button
+                onClick={() => {
+                  setMostrarLogin(false);
+                  setPassword('');
+                  setErrorPassword('');
+                }}
+                style={{
+                  flex: 1,
+                  background: '#eee',
+                  color: '#333',
+                  padding: '0.8rem',
+                  border: 'none',
+                  borderRadius: '40px',
+                  cursor: 'pointer',
+                  fontSize: '1rem'
+                }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {modoAdmin && (
         <div style={{
@@ -141,7 +244,7 @@ export default function TiendaSoftware() {
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
             <h3>✏️ Editor de Productos</h3>
-            <button onClick={() => setModoAdmin(false)} style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}>Cerrar</button>
+            <button onClick={cerrarAdmin} style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}>Cerrar</button>
           </div>
           
           {productos.map((prod) => (
@@ -198,12 +301,14 @@ export default function TiendaSoftware() {
         </div>
       )}
 
-      {productos.length === 0 ? (
+      {productos.length === 0 && !modoAdmin && (
         <div style={{ textAlign: 'center', padding: '3rem', color: '#999' }}>
           <p>📦 No hay productos disponibles</p>
-          <p style={{ fontSize: '0.9rem' }}>Haz clic 5 veces en "MarketSoft" para agregar</p>
+          <p style={{ fontSize: '0.9rem' }}>Haz clic en "MarketSoft" para acceder al panel de administración</p>
         </div>
-      ) : (
+      )}
+
+      {productos.length > 0 && (
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
