@@ -1,0 +1,59 @@
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    ANALIZADOR DE PROYECTOS v1.0                             ║
+║                         Compatible con Pydroid 3                            ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+📂 RAÍZ:
+   /storage/emulated/0/Documents/Proyec Ai/página/prototipica-estudio
+
+ESTRUCTURA DEL PROYECTO
+────────────────────────────────────────────────────────────────────────────────
+📁 prototipica-estudio
+│   📄 .env | 824.00 B | Sin extensión | Modificado: 2026-08-26 22:36:06
+│   📄 estructura.py | 10.08 KB | Python | Modificado: 2026-08-26 22:41:27
+│   📄 index.html | 1.64 KB | HTML | Modificado: 2026-08-26 18:47:46
+│   📄 package.json | 776.00 B | Node.js / JSON | Modificado: 2026-08-26 18:46:38
+│   📄 vite.config.js | 493.00 B | JavaScript | Modificado: 2026-08-26 18:47:11
+│   📁 backend
+│   │   📁 api
+│   │   │   📄 enviar-correo.js | 8.79 KB | JavaScript | Modificado: 2026-08-26 20:22:47
+│   📁 public
+│   │   📄 logo.png | 25.00 B | Desconocido | Modificado: 2026-08-26 18:26:38
+│   │   📁 img
+│   │   📁 videos
+│   📁 src
+│   │   📄 App.jsx | 1.49 KB | JavaScript/React | Modificado: 2026-08-26 18:53:21
+│   │   📄 main.jsx | 242.00 B | JavaScript/React | Modificado: 2026-08-26 18:52:39
+│   │   📁 admin
+│   │   │   📄 AdminCentral.jsx | 10.87 KB | JavaScript/React | Modificado: 2026-08-26 19:21:03
+│   │   │   📄 AdminTienda.jsx | 16.93 KB | JavaScript/React | Modificado: 2026-08-26 20:13:10
+│   │   📁 components
+│   │   │   📄 AsistenteIA.jsx | 15.60 KB | JavaScript/React | Modificado: 2026-08-26 19:15:34
+│   │   │   📄 Contacto.jsx | 13.70 KB | JavaScript/React | Modificado: 2026-08-26 19:11:25
+│   │   │   📄 Cotizar.jsx | 9.30 KB | JavaScript/React | Modificado: 2026-08-26 19:08:00
+│   │   │   📄 MenuHamburguesa.jsx | 10.06 KB | JavaScript/React | Modificado: 2026-08-26 18:56:29
+│   │   │   📄 SeccionCentral.jsx | 11.10 KB | JavaScript/React | Modificado: 2026-08-26 19:04:43
+│   │   │   📄 TiendaSoftware.jsx | 27.26 KB | JavaScript/React | Modificado: 2026-08-26 20:28:43
+│   │   📁 styles
+│   │   │   📄 estilo.css | 3.27 KB | CSS | Modificado: 2026-08-26 18:53:47
+│   │   📁 utils
+│   │   │   📄 emailService.js | 4.36 KB | JavaScript | Modificado: 2026-08-26 20:16:20
+
+════════════════════════════════════════════════════════════════════════════════
+📊 RESUMEN DEL PROYECTO
+════════════════════════════════════════════════════════════════════════════════
+📁 Carpetas analizadas : 11
+📄 Archivos encontrados: 19
+💾 Tamaño total        : 146.75 KB
+
+💻 ARCHIVOS POR LENGUAJE
+────────────────────────────────────────────────────────────────────────────────
+  JavaScript/React              10 archivos      116.54 KB
+  JavaScript                     3 archivos       13.62 KB
+  Sin extensión                  1 archivos       824.00 B
+  Python                         1 archivos       10.08 KB
+  HTML                           1 archivos        1.64 KB
+  Node.js / JSON                 1 archivos       776.00 B
+  Desconocido                    1 archivos        25.00 B
+  CSS                            1 archivos        3.27 KB
