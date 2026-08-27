@@ -5,25 +5,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
-    host: true,
-    open: true
+    host: true
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
-    minify: 'esbuild',
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom']
-        }
-      }
-    }
-  },
-  optimizeDeps: {
-    include: ['react', 'react-dom']
-  },
-  preview: {
-    port: 3001
+    sourcemap: true
   }
 })

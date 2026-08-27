@@ -11,38 +11,22 @@ function App() {
 
   const renderPagina = () => {
     switch(paginaActual) {
-      case 'inicio':
-        return <SeccionCentral />;
-      case 'cotizar':
-        return <Cotizar />;
-      case 'tienda':
-        return <TiendaSoftware />;
-      case 'contacto':
-        return <Contacto />;
-      default:
-        return <SeccionCentral />;
+      case 'inicio': return <SeccionCentral />;
+      case 'cotizar': return <Cotizar />;
+      case 'tienda': return <TiendaSoftware />;
+      case 'contacto': return <Contacto />;
+      default: return <SeccionCentral />;
     }
   };
 
   return (
     <div>
       <MenuHamburguesa setPaginaActual={setPaginaActual} paginaActual={paginaActual} />
-      <div style={{ paddingTop: '80px' }}>
-        {renderPagina()}
-      </div>
+      <div style={{ paddingTop: '80px' }}>{renderPagina()}</div>
       <AsistenteIA />
-      <footer style={{
-        textAlign: 'center',
-        padding: '2rem',
-        borderTop: '1px solid #eee',
-        color: '#999',
-        fontSize: '0.9rem',
-        backgroundColor: '#fafafa'
-      }}>
+      <footer style={{ textAlign: 'center', padding: '2rem', borderTop: '1px solid #eee', color: '#999', fontSize: '0.9rem' }}>
         <p>© {new Date().getFullYear()} Prototipica Estudio</p>
-        <p style={{ fontSize: '0.8rem', marginTop: '0.3rem' }}>
-          pdabasel1@gmail.com
-        </p>
+        <p style={{ fontSize: '0.8rem' }}>pdabasel1@gmail.com</p>
       </footer>
     </div>
   );
