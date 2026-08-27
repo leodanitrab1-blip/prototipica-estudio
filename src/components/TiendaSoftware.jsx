@@ -12,6 +12,17 @@ export default function TiendaSoftware() {
   const [cargandoPago, setCargandoPago] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
+  
+  // Estados para el formulario de nuevo producto
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [nuevoProducto, setNuevoProducto] = useState({
+    nombre: '',
+    precio: '',
+    descripcion: '',
+    imagen: '',
+    video: ''
+  });
+  
   const ADMIN_PASSWORD = 'prototipica2026';
 
   // Cargar productos desde el backend
@@ -23,70 +34,87 @@ export default function TiendaSoftware() {
     try {
       setCargando(true);
       setError('');
-      console.log('📦 Cargando productos...');
       const response = await fetch('/api/productos');
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Productos cargados:', data.length);
         setProductos(data);
       } else {
-        const errorData = await response.json();
-        console.error('❌ Error al cargar productos:', errorData);
-        setError('Error al cargar productos: ' + (errorData.error || 'Error desconocido'));
+        setError('Error al cargar productos');
       }
     } catch (error) {
-      console.error('❌ Error de conexión:', error);
       setError('Error de conexión con el servidor');
     } finally {
       setCargando(false);
     }
   };
 
-  const agregarProducto = async () => {
-    console.log('➕ Intentando agregar producto...');
-    
-    const nuevo = {
-      nombre: 'Nuevo software',
-      precio: 0,
-      descripcion: 'Descripción del software...',
+  // Abrir el formulario para agregar producto
+  const abrirFormulario = () => {
+    setNuevoProducto({
+      nombre: '',
+      precio: '',
+      descripcion: '',
       imagen: '',
       video: ''
-    };
+    });
+    setMostrarFormulario(true);
+  };
+
+  // Cerrar el formulario
+  const cerrarFormulario = () => {
+    setMostrarFormulario(false);
+    setNuevoProducto({
+      nombre: '',
+      precio: '',
+      descripcion: '',
+      imagen: '',
+      video: ''
+    });
+  };
+
+  // Guardar el nuevo producto
+  const guardarProducto = async () => {
+    // Validar campos obligatorios
+    if (!nuevoProducto.nombre.trim()) {
+      alert('❌ El nombre es obligatorio');
+      return;
+    }
+    if (!nuevoProducto.precio || parseFloat(nuevoProducto.precio) <= 0) {
+      alert('❌ El precio debe ser mayor a 0');
+      return;
+    }
 
     try {
-      setError('');
       const response = await fetch('/api/productos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(nuevo)
+        body: JSON.stringify({
+          nombre: nuevoProducto.nombre.trim(),
+          precio: parseFloat(nuevoProducto.precio),
+          descripcion: nuevoProducto.descripcion.trim() || 'Sin descripción',
+          imagen: nuevoProducto.imagen.trim() || '',
+          video: nuevoProducto.video.trim() || ''
+        })
       });
-      
-      console.log('📡 Respuesta del servidor:', response.status);
       
       if (response.ok) {
         const producto = await response.json();
-        console.log('✅ Producto agregado:', producto);
         setProductos([...productos, producto]);
+        cerrarFormulario();
+        alert('✅ Producto agregado correctamente');
       } else {
         const errorData = await response.json();
-        console.error('❌ Error del servidor:', errorData);
-        setError('Error al agregar: ' + (errorData.error || 'Error desconocido'));
-        alert('Error al agregar producto: ' + (errorData.error || 'Error desconocido'));
+        alert('❌ Error al agregar: ' + (errorData.error || 'Error desconocido'));
       }
     } catch (error) {
-      console.error('❌ Error de conexión:', error);
-      setError('Error de conexión con el servidor');
-      alert('Error de conexión. Revisa tu internet.');
+      alert('❌ Error de conexión');
     }
   };
 
   const eliminarProducto = async (id) => {
     if (!window.confirm('¿Eliminar este software?')) return;
-
     try {
-      const response = await fetch(`/api/productos/${id}`, {
-        method: 'DELETE'
-      });
+      const response = await fetch(`/api/productos/${id}`, { method: 'DELETE' });
       if (response.ok) {
         setProductos(productos.filter(p => p.id !== id));
       }
@@ -98,9 +126,7 @@ export default function TiendaSoftware() {
   const actualizarProducto = async (id, campo, valor) => {
     const producto = productos.find(p => p.id === id);
     if (!producto) return;
-
     const actualizado = { ...producto, [campo]: valor };
-
     try {
       const response = await fetch(`/api/productos/${id}`, {
         method: 'PUT',
@@ -136,7 +162,6 @@ export default function TiendaSoftware() {
     setCargandoPago(true);
     try {
       const stripe = await loadStripe(STRIPE_PUBLIC_KEY);
-      
       const response = await fetch('/api/crear-sesion-pago', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -146,20 +171,16 @@ export default function TiendaSoftware() {
           descripcion: producto.descripcion
         })
       });
-
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Error al crear sesión');
       }
-
       const session = await response.json();
       const result = await stripe.redirectToCheckout({ sessionId: session.id });
-      
       if (result.error) {
         alert('Error: ' + result.error.message);
       }
     } catch (error) {
-      console.error('Error en pago:', error);
       alert('Error al conectar con Stripe: ' + error.message);
     } finally {
       setCargandoPago(false);
@@ -176,40 +197,7 @@ export default function TiendaSoftware() {
 
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '1rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h2 onClick={handleTituloClick} style={{ fontSize: '2rem', fontWeight: '300', cursor: 'pointer', userSelect: 'none' }}>
-          🛠️ MarketSoft
-          {modoAdmin && (
-            <span style={{
-              fontSize: '0.7rem',
-              background: '#1a1a1a',
-              color: 'white',
-              padding: '0.2rem 0.8rem',
-              borderRadius: '20px',
-              marginLeft: '1rem'
-            }}>
-              Admin
-            </span>
-          )}
-        </h2>
-        <span style={{ color: '#999', fontSize: '0.85rem' }}>
-          {productos.length} productos
-        </span>
-      </div>
-
-      {error && (
-        <div style={{
-          background: '#fff0f0',
-          border: '1px solid #ffcdd2',
-          borderRadius: '8px',
-          padding: '0.8rem 1.2rem',
-          color: '#c62828',
-          marginBottom: '1rem'
-        }}>
-          ⚠️ {error}
-        </div>
-      )}
-
+      {/* Modal de Login */}
       {mostrarLogin && !modoAdmin && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -293,6 +281,212 @@ export default function TiendaSoftware() {
         </div>
       )}
 
+      {/* MODAL PARA AGREGAR PRODUCTO */}
+      {mostrarFormulario && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 10000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            maxWidth: '500px',
+            width: '100%',
+            padding: '2rem',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ fontSize: '1.3rem', fontWeight: '500' }}>➕ Agregar nuevo producto</h3>
+              <button
+                onClick={cerrarFormulario}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  color: '#999'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.3rem' }}>
+                Nombre del producto *
+              </label>
+              <input
+                type="text"
+                value={nuevoProducto.nombre}
+                onChange={(e) => setNuevoProducto({ ...nuevoProducto, nombre: e.target.value })}
+                placeholder="Ej: Sistema POS Pro"
+                style={{
+                  width: '100%',
+                  padding: '0.8rem',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.3rem' }}>
+                Precio (MXN) *
+              </label>
+              <input
+                type="number"
+                value={nuevoProducto.precio}
+                onChange={(e) => setNuevoProducto({ ...nuevoProducto, precio: e.target.value })}
+                placeholder="Ej: 2999"
+                style={{
+                  width: '100%',
+                  padding: '0.8rem',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.3rem' }}>
+                Descripción
+              </label>
+              <textarea
+                value={nuevoProducto.descripcion}
+                onChange={(e) => setNuevoProducto({ ...nuevoProducto, descripcion: e.target.value })}
+                placeholder="Describe el software..."
+                rows="3"
+                style={{
+                  width: '100%',
+                  padding: '0.8rem',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  resize: 'vertical'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.3rem' }}>
+                URL de imagen (opcional)
+              </label>
+              <input
+                type="text"
+                value={nuevoProducto.imagen}
+                onChange={(e) => setNuevoProducto({ ...nuevoProducto, imagen: e.target.value })}
+                placeholder="https://ejemplo.com/imagen.jpg"
+                style={{
+                  width: '100%',
+                  padding: '0.8rem',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.3rem' }}>
+                URL de video (opcional)
+              </label>
+              <input
+                type="text"
+                value={nuevoProducto.video}
+                onChange={(e) => setNuevoProducto({ ...nuevoProducto, video: e.target.value })}
+                placeholder="https://www.youtube.com/embed/VIDEO_ID"
+                style={{
+                  width: '100%',
+                  padding: '0.8rem',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.8rem' }}>
+              <button
+                onClick={guardarProducto}
+                style={{
+                  flex: 1,
+                  background: '#1a1a1a',
+                  color: 'white',
+                  padding: '0.8rem',
+                  border: 'none',
+                  borderRadius: '40px',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: '500'
+                }}
+              >
+                ✅ Guardar producto
+              </button>
+              <button
+                onClick={cerrarFormulario}
+                style={{
+                  flex: 1,
+                  background: '#eee',
+                  color: '#333',
+                  padding: '0.8rem',
+                  border: 'none',
+                  borderRadius: '40px',
+                  cursor: 'pointer',
+                  fontSize: '1rem'
+                }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ENCABEZADO */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <h2 onClick={handleTituloClick} style={{ fontSize: '2rem', fontWeight: '300', cursor: 'pointer', userSelect: 'none' }}>
+          🛠️ MarketSoft
+          {modoAdmin && (
+            <span style={{
+              fontSize: '0.7rem',
+              background: '#1a1a1a',
+              color: 'white',
+              padding: '0.2rem 0.8rem',
+              borderRadius: '20px',
+              marginLeft: '1rem'
+            }}>
+              Admin
+            </span>
+          )}
+        </h2>
+        <span style={{ color: '#999', fontSize: '0.85rem' }}>
+          {productos.length} productos
+        </span>
+      </div>
+
+      {error && (
+        <div style={{
+          background: '#fff0f0',
+          border: '1px solid #ffcdd2',
+          borderRadius: '8px',
+          padding: '0.8rem 1.2rem',
+          color: '#c62828',
+          marginBottom: '1rem'
+        }}>
+          ⚠️ {error}
+        </div>
+      )}
+
+      {/* PANEL DE ADMIN */}
       {modoAdmin && (
         <div style={{
           border: '2px dashed #1a1a1a',
@@ -301,14 +495,30 @@ export default function TiendaSoftware() {
           marginBottom: '2rem',
           background: '#fafafa'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h3>✏️ Editor de Productos</h3>
-            <button
-              onClick={() => setModoAdmin(false)}
-              style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}
-            >
-              Cerrar
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={abrirFormulario}
+                style={{
+                  background: '#1a1a1a',
+                  color: 'white',
+                  padding: '0.5rem 1.2rem',
+                  border: 'none',
+                  borderRadius: '40px',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem'
+                }}
+              >
+                ➕ Nuevo
+              </button>
+              <button
+                onClick={() => setModoAdmin(false)}
+                style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
 
           {productos.map((prod) => (
@@ -366,29 +576,10 @@ export default function TiendaSoftware() {
               </button>
             </div>
           ))}
-
-          <button
-            onClick={agregarProducto}
-            style={{
-              background: '#1a1a1a',
-              color: 'white',
-              padding: '0.8rem',
-              border: 'none',
-              borderRadius: '8px',
-              width: '100%',
-              cursor: 'pointer',
-              fontSize: '1rem',
-              fontWeight: '500',
-              transition: 'background 0.2s ease'
-            }}
-            onMouseEnter={(e) => e.target.style.background = '#333'}
-            onMouseLeave={(e) => e.target.style.background = '#1a1a1a'}
-          >
-            + Agregar producto
-          </button>
         </div>
       )}
 
+      {/* LISTA DE PRODUCTOS */}
       {productos.length === 0 && !modoAdmin && (
         <div style={{ textAlign: 'center', padding: '3rem', color: '#999' }}>
           <p>📦 No hay productos disponibles</p>
