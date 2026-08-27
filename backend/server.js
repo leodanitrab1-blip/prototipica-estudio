@@ -11,16 +11,11 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// 1. MIDDLEWARE (Siempre al principio)
 app.use(cors());
 app.use(express.json());
 
-// Servir archivos estáticos del frontend (desde la carpeta dist)
-app.use(express.static(path.join(__dirname, '../dist')));
-
-console.log('🚀 Servidor iniciado');
-console.log('📧 TU_CORREO:', process.env.TU_CORREO || '❌ No configurado');
-console.log('💳 STRIPE:', process.env.STRIPE_SECRET_KEY ? '✅ Configurado' : '❌ No configurado');
+// 2. RUTAS DE API (ANTES de servir archivos estáticos)
 
 // ==================== CORREO ====================
 const crearTransporter = () => {
@@ -30,70 +25,55 @@ const crearTransporter = () => {
   }
   return nodemailer.createTransport({
     service: 'gmail',
-    auth: {
-      user: process.env.TU_CORREO,
-      pass: process.env.CONTRASENA_APP
-    },
+    auth: { user: process.env.TU_CORREO, pass: process.env.CONTRASENA_APP },
     tls: { rejectUnauthorized: false }
   });
 };
 
 app.post('/api/enviar-correo', async (req, res) => {
   console.log('📧 Recibida solicitud de correo');
-  console.log('📝 Datos:', req.body);
-  
   try {
     const datos = req.body;
-    if (!datos || !datos.email) {
-      return res.status(400).json({ error: 'Falta el correo electrónico' });
-    }
+    if (!datos?.email) return res.status(400).json({ error: 'Falta el correo' });
 
     const transporter = crearTransporter();
-    if (!transporter) {
-      return res.status(500).json({ error: 'Error al configurar el correo' });
-    }
+    if (!transporter) return res.status(500).json({ error: 'Error al configurar el correo' });
 
-    const mailOptions = {
+    await transporter.sendMail({
       from: `"Prototipica Estudio" <${process.env.TU_CORREO}>`,
       to: process.env.TU_CORREO,
       replyTo: datos.email,
-      subject: datos.tipo === 'cotizacion' ? '📋 Nueva Cotización' : '📬 Nuevo Mensaje de Contacto',
+      subject: datos.tipo === 'cotizacion' ? '📋 Nueva Cotización' : '📬 Nuevo Mensaje',
       html: `
-        <h2>${datos.tipo === 'cotizacion' ? 'Nueva Cotización' : 'Nuevo Mensaje'}</h2>
-        <p><strong>Nombre:</strong> ${datos.nombre || 'No especificado'}</p>
+        <h2>${datos.tipo === 'cotizacion' ? 'Cotización' : 'Mensaje'}</h2>
+        <p><strong>Nombre:</strong> ${datos.nombre || 'N/E'}</p>
         <p><strong>Email:</strong> ${datos.email}</p>
         ${datos.telefono ? `<p><strong>Teléfono:</strong> ${datos.telefono}</p>` : ''}
         ${datos.presupuesto ? `<p><strong>Presupuesto:</strong> $${datos.presupuesto} MXN</p>` : ''}
         <p><strong>${datos.tipo === 'cotizacion' ? 'Descripción' : 'Mensaje'}:</strong></p>
-        <p>${datos.descripcion || datos.mensaje || 'No especificado'}</p>
+        <p>${datos.descripcion || datos.mensaje || 'N/E'}</p>
       `
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Correo enviado:', info.messageId);
-    res.json({ success: true, message: 'Correo enviado' });
+    });
+    res.json({ success: true });
   } catch (error) {
-    console.error('❌ Error al enviar correo:', error);
-    res.status(500).json({ error: 'Error al enviar correo', details: error.message });
+    console.error('❌ Error en correo:', error);
+    res.status(500).json({ error: 'Error al enviar correo' });
   }
 });
 
 // ==================== STRIPE ====================
 app.post('/api/crear-sesion-pago', async (req, res) => {
   console.log('🔍 Recibida solicitud de pago');
-  console.log('📦 Producto:', req.body);
-  
   try {
     if (!process.env.STRIPE_SECRET_KEY) {
-      console.error('❌ STRIPE_SECRET_KEY no está configurada');
-      return res.status(500).json({ error: 'Stripe no está configurado' });
+      return res.status(500).json({ error: 'Stripe no configurado' });
     }
 
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    const { productoId, nombre, precio, descripcion } = req.body;
+    const { nombre, precio, descripcion } = req.body;
 
     if (!nombre || !precio || precio <= 0) {
-      return res.status(400).json({ error: 'Datos del producto inválidos' });
+      return res.status(400).json({ error: 'Datos inválidos' });
     }
 
     const session = await stripe.checkout.sessions.create({
@@ -101,10 +81,7 @@ app.post('/api/crear-sesion-pago', async (req, res) => {
       line_items: [{
         price_data: {
           currency: 'mxn',
-          product_data: { 
-            name: nombre, 
-            description: descripcion || 'Software de Prototipica Estudio' 
-          },
+          product_data: { name: nombre, description: descripcion || 'Software' },
           unit_amount: Math.round(precio * 100)
         },
         quantity: 1
@@ -112,25 +89,26 @@ app.post('/api/crear-sesion-pago', async (req, res) => {
       mode: 'payment',
       success_url: `${process.env.SITE_URL || 'https://prototipica-estudio.onrender.com'}/?success=true`,
       cancel_url: `${process.env.SITE_URL || 'https://prototipica-estudio.onrender.com'}/?canceled=true`,
-      metadata: { productoId: productoId.toString() }
     });
 
-    console.log('✅ Sesión creada:', session.id);
     res.json({ id: session.id });
   } catch (error) {
     console.error('❌ Error en Stripe:', error);
-    res.status(500).json({ error: 'Error al procesar el pago', details: error.message });
+    res.status(500).json({ error: 'Error al procesar el pago' });
   }
 });
 
-// ==================== FRONTEND ====================
-// Todas las rutas que no sean /api/* sirven el index.html
+// 3. ARCHIVOS ESTÁTICOS (DESPUÉS de las rutas API)
+app.use(express.static(path.join(__dirname, '../dist')));
+
+// 4. CUALQUIER OTRA RUTA (Solo si no coincide con /api o archivos estáticos)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
-// ==================== INICIAR SERVIDOR ====================
+// 5. INICIAR SERVIDOR
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
-  console.log(`🌐 URL: https://prototipica-estudio.onrender.com`);
+  console.log(`📧 TU_CORREO: ${process.env.TU_CORREO || '❌ No configurado'}`);
+  console.log(`💳 STRIPE: ${process.env.STRIPE_SECRET_KEY ? '✅ Configurado' : '❌ No configurado'}`);
 });
