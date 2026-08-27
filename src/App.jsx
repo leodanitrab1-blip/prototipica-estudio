@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import MenuHamburguesa from './components/MenuHamburguesa';
 import SeccionCentral from './components/SeccionCentral';
 import Cotizar from './components/Cotizar';
@@ -6,40 +7,41 @@ import Contacto from './components/Contacto';
 import AsistenteIA from './components/AsistenteIA';
 
 function App() {
+  const [paginaActual, setPaginaActual] = useState('inicio');
+
+  const renderPagina = () => {
+    switch(paginaActual) {
+      case 'inicio':
+        return <SeccionCentral />;
+      case 'cotizar':
+        return <Cotizar />;
+      case 'tienda':
+        return <TiendaSoftware />;
+      case 'contacto':
+        return <Contacto />;
+      default:
+        return <SeccionCentral />;
+    }
+  };
+
   return (
-    <div style={{ fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif' }}>
-      <MenuHamburguesa />
-      
-      <section id="inicio" style={{ paddingTop: '20px' }}>
-        <SeccionCentral />
-      </section>
-      
-      <section id="cotizar" style={{ scrollMarginTop: '80px', padding: '2rem 1.5rem' }}>
-        <Cotizar />
-      </section>
-      
-      <section id="tienda" style={{ scrollMarginTop: '80px', padding: '2rem 1.5rem' }}>
-        <TiendaSoftware />
-      </section>
-      
-      <section id="contacto" style={{ scrollMarginTop: '80px', padding: '2rem 1.5rem' }}>
-        <Contacto />
-      </section>
-      
+    <div>
+      <MenuHamburguesa setPaginaActual={setPaginaActual} paginaActual={paginaActual} />
+      <div style={{ paddingTop: '80px' }}>
+        {renderPagina()}
+      </div>
       <AsistenteIA />
-      
-      {/* Footer */}
       <footer style={{
         textAlign: 'center',
-        padding: '2rem 1.5rem',
+        padding: '2rem',
         borderTop: '1px solid #eee',
-        color: '#888',
+        color: '#999',
         fontSize: '0.9rem',
         backgroundColor: '#fafafa'
       }}>
-        <p>© {new Date().getFullYear()} Prototipica Estudio · Desarrollo de software a medida</p>
-        <p style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
-          Hecho con ❤️ desde México
+        <p>© {new Date().getFullYear()} Prototipica Estudio</p>
+        <p style={{ fontSize: '0.8rem', marginTop: '0.3rem' }}>
+          pdabasel1@gmail.com
         </p>
       </footer>
     </div>
