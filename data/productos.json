@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "nombre": "Sistema POS Pro",
+    "precio": 2999,
+    "descripcion": "Sistema de punto de venta para restaurantes y tiendas. Incluye control de inventario, ventas y reportes en tiempo real.",
+    "imagen": "https://placehold.co/600x400/1a1a1a/ffffff?text=POS+Pro",
+    "video": "",
+    "fecha": "2026-08-27T00:00:00.000Z"
+  },
+  {
+    "id": 2,
+    "nombre": "Gestor de Proyectos Ágil",
+    "precio": 1499,
+    "descripcion": "Herramienta de gestión de proyectos con metodología ágil. Tableros Kanban, seguimiento de tareas y reportes de productividad.",
+    "imagen": "https://placehold.co/600x400/333333/ffffff?text=Gestor+Ágil",
+    "video": "",
+    "fecha": "2026-08-27T00:00:00.000Z"
+  }
+]

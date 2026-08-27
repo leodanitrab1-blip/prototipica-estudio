@@ -2,8 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import nodemailer from 'nodemailer';
 import Stripe from 'stripe';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,69 +11,168 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 1. MIDDLEWARE (Siempre al principio)
+// ==========================================
+// 1. CONFIGURACIÓN INICIAL
+// ==========================================
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
-// 2. RUTAS DE API (ANTES de servir archivos estáticos)
+// ==========================================
+// 2. BASE DE DATOS LOCAL (archivo JSON)
+// ==========================================
+const DB_PATH = path.join(__dirname, '../data/productos.json');
 
-// ==================== CORREO ====================
-const crearTransporter = () => {
-  if (!process.env.TU_CORREO || !process.env.CONTRASENA_APP) {
-    console.error('❌ Variables de correo no configuradas');
-    return null;
+// Crear carpeta data si no existe
+if (!fs.existsSync(path.join(__dirname, '../data'))) {
+  fs.mkdirSync(path.join(__dirname, '../data'));
+}
+
+// Leer productos del archivo
+const leerProductos = () => {
+  try {
+    if (fs.existsSync(DB_PATH)) {
+      const data = fs.readFileSync(DB_PATH, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Error al leer productos:', error);
   }
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user: process.env.TU_CORREO, pass: process.env.CONTRASENA_APP },
-    tls: { rejectUnauthorized: false }
-  });
+  return [];
 };
 
-app.post('/api/enviar-correo', async (req, res) => {
-  console.log('📧 Recibida solicitud de correo');
+// Guardar productos en el archivo
+const guardarProductos = (productos) => {
   try {
-    const datos = req.body;
-    if (!datos?.email) return res.status(400).json({ error: 'Falta el correo' });
-
-    const transporter = crearTransporter();
-    if (!transporter) return res.status(500).json({ error: 'Error al configurar el correo' });
-
-    await transporter.sendMail({
-      from: `"Prototipica Estudio" <${process.env.TU_CORREO}>`,
-      to: process.env.TU_CORREO,
-      replyTo: datos.email,
-      subject: datos.tipo === 'cotizacion' ? '📋 Nueva Cotización' : '📬 Nuevo Mensaje',
-      html: `
-        <h2>${datos.tipo === 'cotizacion' ? 'Cotización' : 'Mensaje'}</h2>
-        <p><strong>Nombre:</strong> ${datos.nombre || 'N/E'}</p>
-        <p><strong>Email:</strong> ${datos.email}</p>
-        ${datos.telefono ? `<p><strong>Teléfono:</strong> ${datos.telefono}</p>` : ''}
-        ${datos.presupuesto ? `<p><strong>Presupuesto:</strong> $${datos.presupuesto} MXN</p>` : ''}
-        <p><strong>${datos.tipo === 'cotizacion' ? 'Descripción' : 'Mensaje'}:</strong></p>
-        <p>${datos.descripcion || datos.mensaje || 'N/E'}</p>
-      `
-    });
-    res.json({ success: true });
+    fs.writeFileSync(DB_PATH, JSON.stringify(productos, null, 2));
+    return true;
   } catch (error) {
-    console.error('❌ Error en correo:', error);
-    res.status(500).json({ error: 'Error al enviar correo' });
+    console.error('Error al guardar productos:', error);
+    return false;
+  }
+};
+
+// Inicializar con productos de ejemplo si no hay
+const inicializarProductos = () => {
+  const productos = leerProductos();
+  if (productos.length === 0) {
+    const ejemplos = [
+      {
+        id: 1,
+        nombre: 'Sistema POS Pro',
+        precio: 2999,
+        descripcion: 'Sistema de punto de venta para restaurantes y tiendas',
+        imagen: 'https://placehold.co/600x400/1a1a1a/ffffff?text=POS+Pro',
+        video: '',
+        fecha: new Date().toISOString()
+      },
+      {
+        id: 2,
+        nombre: 'Gestor de Proyectos Ágil',
+        precio: 1499,
+        descripcion: 'Herramienta de gestión con metodología ágil',
+        imagen: 'https://placehold.co/600x400/333333/ffffff?text=Gestor+Ágil',
+        video: '',
+        fecha: new Date().toISOString()
+      }
+    ];
+    guardarProductos(ejemplos);
+    return ejemplos;
+  }
+  return productos;
+};
+
+let productosDB = inicializarProductos();
+
+// ==========================================
+// 3. RUTAS DE LA API
+// ==========================================
+
+// Obtener todos los productos
+app.get('/api/productos', (req, res) => {
+  res.json(productosDB);
+});
+
+// Agregar producto
+app.post('/api/productos', (req, res) => {
+  try {
+    const { nombre, precio, descripcion, imagen, video } = req.body;
+    
+    if (!nombre || !precio) {
+      return res.status(400).json({ error: 'Nombre y precio son obligatorios' });
+    }
+
+    const nuevoProducto = {
+      id: Date.now(),
+      nombre,
+      precio: Number(precio),
+      descripcion: descripcion || '',
+      imagen: imagen || '',
+      video: video || '',
+      fecha: new Date().toISOString()
+    };
+
+    productosDB.push(nuevoProducto);
+    guardarProductos(productosDB);
+    
+    res.status(201).json(nuevoProducto);
+  } catch (error) {
+    console.error('Error al agregar producto:', error);
+    res.status(500).json({ error: 'Error al agregar producto' });
   }
 });
 
-// ==================== STRIPE ====================
-app.post('/api/crear-sesion-pago', async (req, res) => {
-  console.log('🔍 Recibida solicitud de pago');
+// Eliminar producto
+app.delete('/api/productos/:id', (req, res) => {
   try {
-    if (!process.env.STRIPE_SECRET_KEY) {
-      return res.status(500).json({ error: 'Stripe no configurado' });
+    const id = Number(req.params.id);
+    productosDB = productosDB.filter(p => p.id !== id);
+    guardarProductos(productosDB);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al eliminar producto' });
+  }
+});
+
+// Actualizar producto
+app.put('/api/productos/:id', (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { nombre, precio, descripcion, imagen, video } = req.body;
+    
+    const index = productosDB.findIndex(p => p.id === id);
+    if (index === -1) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
     }
 
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    productosDB[index] = {
+      ...productosDB[index],
+      nombre: nombre || productosDB[index].nombre,
+      precio: precio !== undefined ? Number(precio) : productosDB[index].precio,
+      descripcion: descripcion !== undefined ? descripcion : productosDB[index].descripcion,
+      imagen: imagen !== undefined ? imagen : productosDB[index].imagen,
+      video: video !== undefined ? video : productosDB[index].video
+    };
+
+    guardarProductos(productosDB);
+    res.json(productosDB[index]);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al actualizar producto' });
+  }
+});
+
+// ==========================================
+// 4. STRIPE (PAGOS)
+// ==========================================
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+app.post('/api/crear-sesion-pago', async (req, res) => {
+  console.log('🔍 Recibida solicitud de pago');
+  
+  try {
     const { nombre, precio, descripcion } = req.body;
 
     if (!nombre || !precio || precio <= 0) {
-      return res.status(400).json({ error: 'Datos inválidos' });
+      return res.status(400).json({ error: 'Datos del producto inválidos' });
     }
 
     const session = await stripe.checkout.sessions.create({
@@ -81,34 +180,41 @@ app.post('/api/crear-sesion-pago', async (req, res) => {
       line_items: [{
         price_data: {
           currency: 'mxn',
-          product_data: { name: nombre, description: descripcion || 'Software' },
+          product_data: {
+            name: nombre,
+            description: descripcion || 'Software de Prototipica Estudio'
+          },
           unit_amount: Math.round(precio * 100)
         },
         quantity: 1
       }],
       mode: 'payment',
-      success_url: `${process.env.SITE_URL || 'https://prototipica-estudio.onrender.com'}/?success=true`,
-      cancel_url: `${process.env.SITE_URL || 'https://prototipica-estudio.onrender.com'}/?canceled=true`,
+      success_url: 'https://prototipica-estudio.onrender.com?success=true',
+      cancel_url: 'https://prototipica-estudio.onrender.com?canceled=true',
     });
 
+    console.log('✅ Sesión creada:', session.id);
     res.json({ id: session.id });
   } catch (error) {
     console.error('❌ Error en Stripe:', error);
-    res.status(500).json({ error: 'Error al procesar el pago' });
+    res.status(500).json({ error: 'Error al procesar el pago: ' + error.message });
   }
 });
 
-// 3. ARCHIVOS ESTÁTICOS (DESPUÉS de las rutas API)
+// ==========================================
+// 5. SERVIR FRONTEND (Siempre al final)
+// ==========================================
 app.use(express.static(path.join(__dirname, '../dist')));
 
-// 4. CUALQUIER OTRA RUTA (Solo si no coincide con /api o archivos estáticos)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
-// 5. INICIAR SERVIDOR
+// ==========================================
+// 6. INICIAR SERVIDOR
+// ==========================================
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
-  console.log(`📧 TU_CORREO: ${process.env.TU_CORREO || '❌ No configurado'}`);
-  console.log(`💳 STRIPE: ${process.env.STRIPE_SECRET_KEY ? '✅ Configurado' : '❌ No configurado'}`);
+  console.log(`📦 Productos cargados: ${productosDB.length}`);
+  console.log(`💳 Stripe: ${process.env.STRIPE_SECRET_KEY ? '✅' : '❌'}`);
 });

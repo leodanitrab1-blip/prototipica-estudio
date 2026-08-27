@@ -10,37 +10,88 @@ export default function TiendaSoftware() {
   const [password, setPassword] = useState('');
   const [errorPassword, setErrorPassword] = useState('');
   const [cargandoPago, setCargandoPago] = useState(false);
+  const [cargando, setCargando] = useState(true);
   const ADMIN_PASSWORD = 'prototipica2026';
 
+  // Cargar productos desde el backend
   useEffect(() => {
-    const datos = localStorage.getItem('softwarePrototipica');
-    if (datos) {
-      try { setProductos(JSON.parse(datos)); } catch { setProductos([]); }
-    } else { setProductos([]); }
+    cargarProductos();
   }, []);
 
-  const guardarProductos = (nuevos) => {
-    setProductos(nuevos);
-    localStorage.setItem('softwarePrototipica', JSON.stringify(nuevos));
-  };
-
-  const agregarProducto = () => {
-    const nuevo = { id: Date.now(), nombre: 'Nuevo software', precio: 0, descripcion: 'Descripción del software...', imagen: '', video: '' };
-    guardarProductos([...productos, nuevo]);
-  };
-
-  const eliminarProducto = (id) => {
-    if (window.confirm('¿Eliminar este software?')) {
-      guardarProductos(productos.filter(p => p.id !== id));
+  const cargarProductos = async () => {
+    try {
+      setCargando(true);
+      const response = await fetch('/api/productos');
+      if (response.ok) {
+        const data = await response.json();
+        setProductos(data);
+      } else {
+        console.error('Error al cargar productos');
+      }
+    } catch (error) {
+      console.error('Error de conexión:', error);
+    } finally {
+      setCargando(false);
     }
   };
 
-  const actualizarProducto = (id, campo, valor) => {
-    const copia = productos.map(p => {
-      if (p.id === id) return { ...p, [campo]: valor };
-      return p;
-    });
-    guardarProductos(copia);
+  const agregarProducto = async () => {
+    const nuevo = {
+      nombre: 'Nuevo software',
+      precio: 0,
+      descripcion: 'Descripción del software...',
+      imagen: '',
+      video: ''
+    };
+
+    try {
+      const response = await fetch('/api/productos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nuevo)
+      });
+      if (response.ok) {
+        const producto = await response.json();
+        setProductos([...productos, producto]);
+      }
+    } catch (error) {
+      console.error('Error al agregar producto:', error);
+    }
+  };
+
+  const eliminarProducto = async (id) => {
+    if (!window.confirm('¿Eliminar este software?')) return;
+
+    try {
+      const response = await fetch(`/api/productos/${id}`, {
+        method: 'DELETE'
+      });
+      if (response.ok) {
+        setProductos(productos.filter(p => p.id !== id));
+      }
+    } catch (error) {
+      console.error('Error al eliminar:', error);
+    }
+  };
+
+  const actualizarProducto = async (id, campo, valor) => {
+    const producto = productos.find(p => p.id === id);
+    if (!producto) return;
+
+    const actualizado = { ...producto, [campo]: valor };
+
+    try {
+      const response = await fetch(`/api/productos/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(actualizado)
+      });
+      if (response.ok) {
+        setProductos(productos.map(p => p.id === id ? actualizado : p));
+      }
+    } catch (error) {
+      console.error('Error al actualizar:', error);
+    }
   };
 
   const handleTituloClick = () => {
@@ -65,101 +116,329 @@ export default function TiendaSoftware() {
     try {
       const stripe = await loadStripe(STRIPE_PUBLIC_KEY);
       
-      // ✅ Usamos la URL completa para asegurar que llega al backend
       const response = await fetch('/api/crear-sesion-pago', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          productoId: producto.id,
           nombre: producto.nombre,
           precio: producto.precio,
           descripcion: producto.descripcion
         })
       });
-      
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al crear la sesión de pago');
+        const error = await response.json();
+        throw new Error(error.error || 'Error al crear sesión');
       }
-      
+
       const session = await response.json();
       const result = await stripe.redirectToCheckout({ sessionId: session.id });
       
       if (result.error) {
-        alert('Error al procesar el pago: ' + result.error.message);
+        alert('Error: ' + result.error.message);
       }
     } catch (error) {
-      console.error('Error en Stripe:', error);
-      alert('Error al conectar con Stripe. Intenta nuevamente.');
+      console.error('Error en pago:', error);
+      alert('Error al conectar con Stripe: ' + error.message);
     } finally {
       setCargandoPago(false);
     }
   };
+
+  if (cargando) {
+    return (
+      <div style={{ textAlign: 'center', padding: '4rem', color: '#999' }}>
+        <p>Cargando productos...</p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '1rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h2 onClick={handleTituloClick} style={{ fontSize: '2rem', fontWeight: '300', cursor: 'pointer', userSelect: 'none' }}>
           🛠️ MarketSoft
-          {modoAdmin && <span style={{ fontSize: '0.7rem', background: '#1a1a1a', color: 'white', padding: '0.2rem 0.8rem', borderRadius: '20px', marginLeft: '1rem' }}>Admin</span>}
+          {modoAdmin && (
+            <span style={{
+              fontSize: '0.7rem',
+              background: '#1a1a1a',
+              color: 'white',
+              padding: '0.2rem 0.8rem',
+              borderRadius: '20px',
+              marginLeft: '1rem'
+            }}>
+              Admin
+            </span>
+          )}
         </h2>
+        <span style={{ color: '#999', fontSize: '0.85rem' }}>
+          {productos.length} productos
+        </span>
       </div>
 
       {mostrarLogin && !modoAdmin && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ background: 'white', borderRadius: '16px', maxWidth: '400px', width: '100%', padding: '2rem', textAlign: 'center' }}>
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            maxWidth: '400px',
+            width: '100%',
+            padding: '2rem',
+            textAlign: 'center'
+          }}>
             <h3 style={{ marginBottom: '1rem' }}>🔒 Acceso de administrador</h3>
-            <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '1.5rem' }}>Ingresa la contraseña para administrar los productos.</p>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Contraseña..." style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '8px', marginBottom: '0.8rem', fontSize: '1rem' }} onKeyPress={(e) => e.key === 'Enter' && handleLogin()} />
-            {errorPassword && <p style={{ color: '#c62828', fontSize: '0.9rem', marginBottom: '0.8rem' }}>{errorPassword}</p>}
+            <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+              Ingresa la contraseña para administrar los productos.
+            </p>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Contraseña..."
+              style={{
+                width: '100%',
+                padding: '0.8rem',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                marginBottom: '0.8rem',
+                fontSize: '1rem'
+              }}
+              onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+            />
+            {errorPassword && (
+              <p style={{ color: '#c62828', fontSize: '0.9rem', marginBottom: '0.8rem' }}>
+                {errorPassword}
+              </p>
+            )}
             <div style={{ display: 'flex', gap: '0.8rem' }}>
-              <button onClick={handleLogin} style={{ flex: 1, background: '#1a1a1a', color: 'white', padding: '0.8rem', border: 'none', borderRadius: '40px', cursor: 'pointer', fontSize: '1rem' }}>Ingresar</button>
-              <button onClick={() => { setMostrarLogin(false); setPassword(''); setErrorPassword(''); }} style={{ flex: 1, background: '#eee', color: '#333', padding: '0.8rem', border: 'none', borderRadius: '40px', cursor: 'pointer', fontSize: '1rem' }}>Cancelar</button>
+              <button
+                onClick={handleLogin}
+                style={{
+                  flex: 1,
+                  background: '#1a1a1a',
+                  color: 'white',
+                  padding: '0.8rem',
+                  border: 'none',
+                  borderRadius: '40px',
+                  cursor: 'pointer',
+                  fontSize: '1rem'
+                }}
+              >
+                Ingresar
+              </button>
+              <button
+                onClick={() => {
+                  setMostrarLogin(false);
+                  setPassword('');
+                  setErrorPassword('');
+                }}
+                style={{
+                  flex: 1,
+                  background: '#eee',
+                  color: '#333',
+                  padding: '0.8rem',
+                  border: 'none',
+                  borderRadius: '40px',
+                  cursor: 'pointer',
+                  fontSize: '1rem'
+                }}
+              >
+                Cancelar
+              </button>
             </div>
           </div>
         </div>
       )}
 
       {modoAdmin && (
-        <div style={{ border: '2px dashed #1a1a1a', borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem', background: '#fafafa' }}>
+        <div style={{
+          border: '2px dashed #1a1a1a',
+          borderRadius: '12px',
+          padding: '1.5rem',
+          marginBottom: '2rem',
+          background: '#fafafa'
+        }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
             <h3>✏️ Editor de Productos</h3>
-            <button onClick={() => setModoAdmin(false)} style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}>Cerrar</button>
+            <button
+              onClick={() => setModoAdmin(false)}
+              style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}
+            >
+              Cerrar
+            </button>
           </div>
+
           {productos.map((prod) => (
-            <div key={prod.id} style={{ border: '1px solid #eee', padding: '1rem', marginBottom: '1rem', background: 'white', borderRadius: '8px' }}>
-              <input value={prod.nombre} onChange={(e) => actualizarProducto(prod.id, 'nombre', e.target.value)} placeholder="Nombre del software" style={{ marginBottom: '0.5rem' }} />
-              <input type="number" value={prod.precio} onChange={(e) => actualizarProducto(prod.id, 'precio', parseFloat(e.target.value))} placeholder="Precio en MXN" style={{ marginBottom: '0.5rem' }} />
-              <textarea value={prod.descripcion} onChange={(e) => actualizarProducto(prod.id, 'descripcion', e.target.value)} placeholder="Descripción del software" rows="2" style={{ marginBottom: '0.5rem' }} />
-              <input value={prod.imagen} onChange={(e) => actualizarProducto(prod.id, 'imagen', e.target.value)} placeholder="URL de imagen" style={{ marginBottom: '0.5rem' }} />
-              <input value={prod.video} onChange={(e) => actualizarProducto(prod.id, 'video', e.target.value)} placeholder="URL de video (YouTube embed)" style={{ marginBottom: '0.5rem' }} />
-              <button onClick={() => eliminarProducto(prod.id)} style={{ background: '#ff4444', color: 'white', border: 'none', padding: '0.3rem 1rem', borderRadius: '4px', cursor: 'pointer' }}>Eliminar</button>
+            <div key={prod.id} style={{
+              border: '1px solid #eee',
+              padding: '1rem',
+              marginBottom: '1rem',
+              background: 'white',
+              borderRadius: '8px'
+            }}>
+              <input
+                value={prod.nombre}
+                onChange={(e) => actualizarProducto(prod.id, 'nombre', e.target.value)}
+                placeholder="Nombre del software"
+                style={{ marginBottom: '0.5rem' }}
+              />
+              <input
+                type="number"
+                value={prod.precio}
+                onChange={(e) => actualizarProducto(prod.id, 'precio', parseFloat(e.target.value))}
+                placeholder="Precio en MXN"
+                style={{ marginBottom: '0.5rem' }}
+              />
+              <textarea
+                value={prod.descripcion}
+                onChange={(e) => actualizarProducto(prod.id, 'descripcion', e.target.value)}
+                placeholder="Descripción del software"
+                rows="2"
+                style={{ marginBottom: '0.5rem' }}
+              />
+              <input
+                value={prod.imagen}
+                onChange={(e) => actualizarProducto(prod.id, 'imagen', e.target.value)}
+                placeholder="URL de imagen"
+                style={{ marginBottom: '0.5rem' }}
+              />
+              <input
+                value={prod.video}
+                onChange={(e) => actualizarProducto(prod.id, 'video', e.target.value)}
+                placeholder="URL de video (YouTube embed)"
+                style={{ marginBottom: '0.5rem' }}
+              />
+              <button
+                onClick={() => eliminarProducto(prod.id)}
+                style={{
+                  background: '#ff4444',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.3rem 1rem',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Eliminar
+              </button>
             </div>
           ))}
-          <button onClick={agregarProducto} style={{ background: '#1a1a1a', color: 'white', padding: '0.8rem', border: 'none', borderRadius: '8px', width: '100%', cursor: 'pointer' }}>+ Agregar producto</button>
+
+          <button
+            onClick={agregarProducto}
+            style={{
+              background: '#1a1a1a',
+              color: 'white',
+              padding: '0.8rem',
+              border: 'none',
+              borderRadius: '8px',
+              width: '100%',
+              cursor: 'pointer'
+            }}
+          >
+            + Agregar producto
+          </button>
         </div>
       )}
 
       {productos.length === 0 && !modoAdmin && (
         <div style={{ textAlign: 'center', padding: '3rem', color: '#999' }}>
           <p>📦 No hay productos disponibles</p>
-          <p style={{ fontSize: '0.9rem' }}>Haz clic en "MarketSoft" para acceder al panel de administración</p>
+          <p style={{ fontSize: '0.9rem' }}>
+            Haz clic en "MarketSoft" para acceder al panel de administración
+          </p>
         </div>
       )}
 
       {productos.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2rem' }}>
-          {productos.map(prod => (
-            <div key={prod.id} style={{ border: '1px solid #eee', borderRadius: '16px', overflow: 'hidden', transition: 'all 0.3s ease', background: 'white' }}>
-              {prod.imagen && <img src={prod.imagen} alt={prod.nombre} style={{ width: '100%', height: '200px', objectFit: 'cover' }} />}
-              {prod.video && <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}><iframe src={prod.video} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen title={prod.nombre} /></div>}
-              <div style={{ padding: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: '500', marginBottom: '0.5rem' }}>{prod.nombre}</h3>
-                <p style={{ color: '#666', fontSize: '0.95rem', marginBottom: '1rem' }}>{prod.descripcion}</p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '1.5rem', fontWeight: '600' }}>${prod.precio.toLocaleString('es-MX')} MXN</span>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+          gap: '2rem'
+        }}>
+          {productos.map((prod) => (
+            <div
+              key={prod.id}
+              style={{
+                border: '1px solid #eee',
+                borderRadius: '16px',
+                overflow: 'hidden',
+                transition: 'all 0.3s ease',
+                background: 'white'
+              }}
+            >
+              {prod.imagen && (
+                <img
+                  src={prod.imagen}
+                  alt={prod.nombre}
+                  style={{ width: '100%', height: '200px', objectFit: 'cover' }}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
+                />
+              )}
+              {prod.video && (
+                <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+                  <iframe
+                    src={prod.video}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      border: 'none'
+                    }}
+                    allowFullScreen
+                    title={prod.nombre}
+                  />
                 </div>
-                <button onClick={() => manejarPago(prod)} disabled={cargandoPago} style={{ width: '100%', background: '#635bff', color: 'white', padding: '0.8rem', border: 'none', borderRadius: '40px', cursor: cargandoPago ? 'not-allowed' : 'pointer', fontSize: '0.95rem', fontWeight: '500', opacity: cargandoPago ? 0.7 : 1 }}>{cargandoPago ? '⏳ Procesando...' : '💳 Comprar con Stripe'}</button>
+              )}
+              <div style={{ padding: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: '500', marginBottom: '0.5rem' }}>
+                  {prod.nombre}
+                </h3>
+                <p style={{ color: '#666', fontSize: '0.95rem', marginBottom: '1rem' }}>
+                  {prod.descripcion}
+                </p>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '1rem'
+                }}>
+                  <span style={{ fontSize: '1.5rem', fontWeight: '600' }}>
+                    ${prod.precio.toLocaleString('es-MX')} MXN
+                  </span>
+                </div>
+                <button
+                  onClick={() => manejarPago(prod)}
+                  disabled={cargandoPago}
+                  style={{
+                    width: '100%',
+                    background: '#635bff',
+                    color: 'white',
+                    padding: '0.8rem',
+                    border: 'none',
+                    borderRadius: '40px',
+                    cursor: cargandoPago ? 'not-allowed' : 'pointer',
+                    fontSize: '0.95rem',
+                    fontWeight: '500',
+                    opacity: cargandoPago ? 0.7 : 1,
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {cargandoPago ? '⏳ Procesando...' : '💳 Comprar con Stripe'}
+                </button>
               </div>
             </div>
           ))}
