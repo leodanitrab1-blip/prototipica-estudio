@@ -12,20 +12,21 @@ export default function TiendaSoftware() {
   const [cargandoPago, setCargandoPago] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
-  
-  // Estados para el formulario de nuevo producto
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [nuevoProducto, setNuevoProducto] = useState({
     nombre: '',
     precio: '',
     descripcion: '',
     imagen: '',
-    video: ''
+    video: '',
+    enlaceDescarga: ''
   });
+  const [emailCliente, setEmailCliente] = useState('');
+  const [mostrarModalEmail, setMostrarModalEmail] = useState(false);
+  const [productoSeleccionado, setProductoSeleccionado] = useState(null);
   
   const ADMIN_PASSWORD = 'prototipica2026';
 
-  // Cargar productos desde el backend
   useEffect(() => {
     cargarProductos();
   }, []);
@@ -48,19 +49,18 @@ export default function TiendaSoftware() {
     }
   };
 
-  // Abrir el formulario para agregar producto
   const abrirFormulario = () => {
     setNuevoProducto({
       nombre: '',
       precio: '',
       descripcion: '',
       imagen: '',
-      video: ''
+      video: '',
+      enlaceDescarga: ''
     });
     setMostrarFormulario(true);
   };
 
-  // Cerrar el formulario
   const cerrarFormulario = () => {
     setMostrarFormulario(false);
     setNuevoProducto({
@@ -68,13 +68,12 @@ export default function TiendaSoftware() {
       precio: '',
       descripcion: '',
       imagen: '',
-      video: ''
+      video: '',
+      enlaceDescarga: ''
     });
   };
 
-  // Guardar el nuevo producto
   const guardarProducto = async () => {
-    // Validar campos obligatorios
     if (!nuevoProducto.nombre.trim()) {
       alert('❌ El nombre es obligatorio');
       return;
@@ -93,7 +92,8 @@ export default function TiendaSoftware() {
           precio: parseFloat(nuevoProducto.precio),
           descripcion: nuevoProducto.descripcion.trim() || 'Sin descripción',
           imagen: nuevoProducto.imagen.trim() || '',
-          video: nuevoProducto.video.trim() || ''
+          video: nuevoProducto.video.trim() || '',
+          enlaceDescarga: nuevoProducto.enlaceDescarga.trim() || ''
         })
       });
       
@@ -158,8 +158,24 @@ export default function TiendaSoftware() {
     }
   };
 
-  const manejarPago = async (producto) => {
+  // Función para iniciar el pago
+  const iniciarPago = (producto) => {
+    setProductoSeleccionado(producto);
+    setEmailCliente('');
+    setMostrarModalEmail(true);
+  };
+
+  // Función para procesar el pago con email
+  const procesarPago = async () => {
+    if (!emailCliente || !emailCliente.includes('@')) {
+      alert('❌ Por favor, ingresa un correo electrónico válido');
+      return;
+    }
+
+    const producto = productoSeleccionado;
     setCargandoPago(true);
+    setMostrarModalEmail(false);
+
     try {
       const stripe = await loadStripe(STRIPE_PUBLIC_KEY);
       const response = await fetch('/api/crear-sesion-pago', {
@@ -168,15 +184,20 @@ export default function TiendaSoftware() {
         body: JSON.stringify({
           nombre: producto.nombre,
           precio: producto.precio,
-          descripcion: producto.descripcion
+          descripcion: producto.descripcion,
+          email: emailCliente,
+          enlaceDescarga: producto.enlaceDescarga || 'https://prototipica-estudio.onrender.com'
         })
       });
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Error al crear sesión');
       }
+
       const session = await response.json();
       const result = await stripe.redirectToCheckout({ sessionId: session.id });
+
       if (result.error) {
         alert('Error: ' + result.error.message);
       }
@@ -281,13 +302,100 @@ export default function TiendaSoftware() {
         </div>
       )}
 
-      {/* MODAL PARA AGREGAR PRODUCTO */}
-      {mostrarFormulario && (
+      {/* Modal para pedir email del cliente */}
+      {mostrarModalEmail && productoSeleccionado && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(0,0,0,0.6)',
           backdropFilter: 'blur(8px)',
           zIndex: 10000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            maxWidth: '400px',
+            width: '100%',
+            padding: '2rem',
+            textAlign: 'center'
+          }}>
+            <h3 style={{ marginBottom: '0.5rem' }}>💳 Confirmar compra</h3>
+            <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '0.3rem' }}>
+              {productoSeleccionado.nombre}
+            </p>
+            <p style={{ color: '#1a1a1a', fontSize: '1.5rem', fontWeight: '600', marginBottom: '1.5rem' }}>
+              ${productoSeleccionado.precio.toLocaleString('es-MX')} MXN
+            </p>
+            <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '1rem' }}>
+              Recibirás el enlace de descarga en tu correo después del pago.
+            </p>
+            <input
+              type="email"
+              value={emailCliente}
+              onChange={(e) => setEmailCliente(e.target.value)}
+              placeholder="Tu correo electrónico"
+              style={{
+                width: '100%',
+                padding: '0.8rem',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                fontSize: '1rem',
+                marginBottom: '1rem'
+              }}
+            />
+            <div style={{ display: 'flex', gap: '0.8rem' }}>
+              <button
+                onClick={procesarPago}
+                disabled={cargandoPago}
+                style={{
+                  flex: 1,
+                  background: '#635bff',
+                  color: 'white',
+                  padding: '0.8rem',
+                  border: 'none',
+                  borderRadius: '40px',
+                  cursor: cargandoPago ? 'not-allowed' : 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: '500',
+                  opacity: cargandoPago ? 0.7 : 1
+                }}
+              >
+                {cargandoPago ? '⏳ Procesando...' : '✅ Pagar ahora'}
+              </button>
+              <button
+                onClick={() => {
+                  setMostrarModalEmail(false);
+                  setProductoSeleccionado(null);
+                  setEmailCliente('');
+                }}
+                style={{
+                  flex: 1,
+                  background: '#eee',
+                  color: '#333',
+                  padding: '0.8rem',
+                  border: 'none',
+                  borderRadius: '40px',
+                  cursor: 'pointer',
+                  fontSize: '1rem'
+                }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para agregar producto */}
+      {mostrarFormulario && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 9998,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -304,148 +412,45 @@ export default function TiendaSoftware() {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 style={{ fontSize: '1.3rem', fontWeight: '500' }}>➕ Agregar nuevo producto</h3>
-              <button
-                onClick={cerrarFormulario}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '1.5rem',
-                  cursor: 'pointer',
-                  color: '#999'
-                }}
-              >
-                ✕
-              </button>
+              <button onClick={cerrarFormulario} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#999' }}>✕</button>
             </div>
 
             <div style={{ marginBottom: '1rem' }}>
-              <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.3rem' }}>
-                Nombre del producto *
-              </label>
-              <input
-                type="text"
-                value={nuevoProducto.nombre}
-                onChange={(e) => setNuevoProducto({ ...nuevoProducto, nombre: e.target.value })}
-                placeholder="Ej: Sistema POS Pro"
-                style={{
-                  width: '100%',
-                  padding: '0.8rem',
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  fontSize: '1rem'
-                }}
-              />
+              <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.3rem' }}>Nombre del producto *</label>
+              <input type="text" value={nuevoProducto.nombre} onChange={(e) => setNuevoProducto({ ...nuevoProducto, nombre: e.target.value })} placeholder="Ej: Sistema POS Pro" style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '8px', fontSize: '1rem' }} />
             </div>
 
             <div style={{ marginBottom: '1rem' }}>
-              <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.3rem' }}>
-                Precio (MXN) *
-              </label>
-              <input
-                type="number"
-                value={nuevoProducto.precio}
-                onChange={(e) => setNuevoProducto({ ...nuevoProducto, precio: e.target.value })}
-                placeholder="Ej: 2999"
-                style={{
-                  width: '100%',
-                  padding: '0.8rem',
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  fontSize: '1rem'
-                }}
-              />
+              <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.3rem' }}>Precio (MXN) *</label>
+              <input type="number" value={nuevoProducto.precio} onChange={(e) => setNuevoProducto({ ...nuevoProducto, precio: e.target.value })} placeholder="Ej: 2999" style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '8px', fontSize: '1rem' }} />
             </div>
 
             <div style={{ marginBottom: '1rem' }}>
-              <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.3rem' }}>
-                Descripción
-              </label>
-              <textarea
-                value={nuevoProducto.descripcion}
-                onChange={(e) => setNuevoProducto({ ...nuevoProducto, descripcion: e.target.value })}
-                placeholder="Describe el software..."
-                rows="3"
-                style={{
-                  width: '100%',
-                  padding: '0.8rem',
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  resize: 'vertical'
-                }}
-              />
+              <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.3rem' }}>Descripción</label>
+              <textarea value={nuevoProducto.descripcion} onChange={(e) => setNuevoProducto({ ...nuevoProducto, descripcion: e.target.value })} placeholder="Describe el software..." rows="3" style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '8px', fontSize: '1rem', resize: 'vertical' }} />
             </div>
 
             <div style={{ marginBottom: '1rem' }}>
-              <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.3rem' }}>
-                URL de imagen (opcional)
-              </label>
-              <input
-                type="text"
-                value={nuevoProducto.imagen}
-                onChange={(e) => setNuevoProducto({ ...nuevoProducto, imagen: e.target.value })}
-                placeholder="https://ejemplo.com/imagen.jpg"
-                style={{
-                  width: '100%',
-                  padding: '0.8rem',
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  fontSize: '1rem'
-                }}
-              />
+              <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.3rem' }}>URL de imagen (opcional)</label>
+              <input type="text" value={nuevoProducto.imagen} onChange={(e) => setNuevoProducto({ ...nuevoProducto, imagen: e.target.value })} placeholder="https://ejemplo.com/imagen.jpg" style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '8px', fontSize: '1rem' }} />
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.3rem' }}>URL de video (opcional)</label>
+              <input type="text" value={nuevoProducto.video} onChange={(e) => setNuevoProducto({ ...nuevoProducto, video: e.target.value })} placeholder="https://www.youtube.com/embed/VIDEO_ID" style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '8px', fontSize: '1rem' }} />
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.3rem' }}>
-                URL de video (opcional)
-              </label>
-              <input
-                type="text"
-                value={nuevoProducto.video}
-                onChange={(e) => setNuevoProducto({ ...nuevoProducto, video: e.target.value })}
-                placeholder="https://www.youtube.com/embed/VIDEO_ID"
-                style={{
-                  width: '100%',
-                  padding: '0.8rem',
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  fontSize: '1rem'
-                }}
-              />
+              <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.3rem' }}>Enlace de descarga (opcional)</label>
+              <input type="text" value={nuevoProducto.enlaceDescarga} onChange={(e) => setNuevoProducto({ ...nuevoProducto, enlaceDescarga: e.target.value })} placeholder="https://ejemplo.com/descargas/software.zip" style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '8px', fontSize: '1rem' }} />
+              <p style={{ fontSize: '0.8rem', color: '#999', marginTop: '0.3rem' }}>
+                El cliente recibirá este enlace por correo después del pago.
+              </p>
             </div>
 
             <div style={{ display: 'flex', gap: '0.8rem' }}>
-              <button
-                onClick={guardarProducto}
-                style={{
-                  flex: 1,
-                  background: '#1a1a1a',
-                  color: 'white',
-                  padding: '0.8rem',
-                  border: 'none',
-                  borderRadius: '40px',
-                  cursor: 'pointer',
-                  fontSize: '1rem',
-                  fontWeight: '500'
-                }}
-              >
-                ✅ Guardar producto
-              </button>
-              <button
-                onClick={cerrarFormulario}
-                style={{
-                  flex: 1,
-                  background: '#eee',
-                  color: '#333',
-                  padding: '0.8rem',
-                  border: 'none',
-                  borderRadius: '40px',
-                  cursor: 'pointer',
-                  fontSize: '1rem'
-                }}
-              >
-                Cancelar
-              </button>
+              <button onClick={guardarProducto} style={{ flex: 1, background: '#1a1a1a', color: 'white', padding: '0.8rem', border: 'none', borderRadius: '40px', cursor: 'pointer', fontSize: '1rem', fontWeight: '500' }}>✅ Guardar producto</button>
+              <button onClick={cerrarFormulario} style={{ flex: 1, background: '#eee', color: '#333', padding: '0.8rem', border: 'none', borderRadius: '40px', cursor: 'pointer', fontSize: '1rem' }}>Cancelar</button>
             </div>
           </div>
         </div>
@@ -498,82 +503,20 @@ export default function TiendaSoftware() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h3>✏️ Editor de Productos</h3>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button
-                onClick={abrirFormulario}
-                style={{
-                  background: '#1a1a1a',
-                  color: 'white',
-                  padding: '0.5rem 1.2rem',
-                  border: 'none',
-                  borderRadius: '40px',
-                  cursor: 'pointer',
-                  fontSize: '0.9rem'
-                }}
-              >
-                ➕ Nuevo
-              </button>
-              <button
-                onClick={() => setModoAdmin(false)}
-                style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}
-              >
-                Cerrar
-              </button>
+              <button onClick={abrirFormulario} style={{ background: '#1a1a1a', color: 'white', padding: '0.5rem 1.2rem', border: 'none', borderRadius: '40px', cursor: 'pointer', fontSize: '0.9rem' }}>➕ Nuevo</button>
+              <button onClick={() => setModoAdmin(false)} style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}>Cerrar</button>
             </div>
           </div>
 
           {productos.map((prod) => (
-            <div key={prod.id} style={{
-              border: '1px solid #eee',
-              padding: '1rem',
-              marginBottom: '1rem',
-              background: 'white',
-              borderRadius: '8px'
-            }}>
-              <input
-                value={prod.nombre}
-                onChange={(e) => actualizarProducto(prod.id, 'nombre', e.target.value)}
-                placeholder="Nombre del software"
-                style={{ marginBottom: '0.5rem' }}
-              />
-              <input
-                type="number"
-                value={prod.precio}
-                onChange={(e) => actualizarProducto(prod.id, 'precio', parseFloat(e.target.value))}
-                placeholder="Precio en MXN"
-                style={{ marginBottom: '0.5rem' }}
-              />
-              <textarea
-                value={prod.descripcion}
-                onChange={(e) => actualizarProducto(prod.id, 'descripcion', e.target.value)}
-                placeholder="Descripción del software"
-                rows="2"
-                style={{ marginBottom: '0.5rem' }}
-              />
-              <input
-                value={prod.imagen}
-                onChange={(e) => actualizarProducto(prod.id, 'imagen', e.target.value)}
-                placeholder="URL de imagen"
-                style={{ marginBottom: '0.5rem' }}
-              />
-              <input
-                value={prod.video}
-                onChange={(e) => actualizarProducto(prod.id, 'video', e.target.value)}
-                placeholder="URL de video (YouTube embed)"
-                style={{ marginBottom: '0.5rem' }}
-              />
-              <button
-                onClick={() => eliminarProducto(prod.id)}
-                style={{
-                  background: '#ff4444',
-                  color: 'white',
-                  border: 'none',
-                  padding: '0.3rem 1rem',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                Eliminar
-              </button>
+            <div key={prod.id} style={{ border: '1px solid #eee', padding: '1rem', marginBottom: '1rem', background: 'white', borderRadius: '8px' }}>
+              <input value={prod.nombre} onChange={(e) => actualizarProducto(prod.id, 'nombre', e.target.value)} placeholder="Nombre" style={{ marginBottom: '0.5rem' }} />
+              <input type="number" value={prod.precio} onChange={(e) => actualizarProducto(prod.id, 'precio', parseFloat(e.target.value))} placeholder="Precio" style={{ marginBottom: '0.5rem' }} />
+              <textarea value={prod.descripcion} onChange={(e) => actualizarProducto(prod.id, 'descripcion', e.target.value)} placeholder="Descripción" rows="2" style={{ marginBottom: '0.5rem' }} />
+              <input value={prod.imagen} onChange={(e) => actualizarProducto(prod.id, 'imagen', e.target.value)} placeholder="URL imagen" style={{ marginBottom: '0.5rem' }} />
+              <input value={prod.video} onChange={(e) => actualizarProducto(prod.id, 'video', e.target.value)} placeholder="URL video" style={{ marginBottom: '0.5rem' }} />
+              <input value={prod.enlaceDescarga || ''} onChange={(e) => actualizarProducto(prod.id, 'enlaceDescarga', e.target.value)} placeholder="Enlace de descarga" style={{ marginBottom: '0.5rem' }} />
+              <button onClick={() => eliminarProducto(prod.id)} style={{ background: '#ff4444', color: 'white', border: 'none', padding: '0.3rem 1rem', borderRadius: '4px', cursor: 'pointer' }}>Eliminar</button>
             </div>
           ))}
         </div>
@@ -583,9 +526,7 @@ export default function TiendaSoftware() {
       {productos.length === 0 && !modoAdmin && (
         <div style={{ textAlign: 'center', padding: '3rem', color: '#999' }}>
           <p>📦 No hay productos disponibles</p>
-          <p style={{ fontSize: '0.9rem' }}>
-            Haz clic en "MarketSoft" para acceder al panel de administración
-          </p>
+          <p style={{ fontSize: '0.9rem' }}>Haz clic en "MarketSoft" para acceder al panel de administración</p>
         </div>
       )}
 
@@ -596,62 +537,23 @@ export default function TiendaSoftware() {
           gap: '2rem'
         }}>
           {productos.map((prod) => (
-            <div
-              key={prod.id}
-              style={{
-                border: '1px solid #eee',
-                borderRadius: '16px',
-                overflow: 'hidden',
-                transition: 'all 0.3s ease',
-                background: 'white'
-              }}
-            >
+            <div key={prod.id} style={{ border: '1px solid #eee', borderRadius: '16px', overflow: 'hidden', transition: 'all 0.3s ease', background: 'white' }}>
               {prod.imagen && (
-                <img
-                  src={prod.imagen}
-                  alt={prod.nombre}
-                  style={{ width: '100%', height: '200px', objectFit: 'cover' }}
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                  }}
-                />
+                <img src={prod.imagen} alt={prod.nombre} style={{ width: '100%', height: '200px', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none'; }} />
               )}
               {prod.video && (
                 <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
-                  <iframe
-                    src={prod.video}
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      border: 'none'
-                    }}
-                    allowFullScreen
-                    title={prod.nombre}
-                  />
+                  <iframe src={prod.video} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen title={prod.nombre} />
                 </div>
               )}
               <div style={{ padding: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: '500', marginBottom: '0.5rem' }}>
-                  {prod.nombre}
-                </h3>
-                <p style={{ color: '#666', fontSize: '0.95rem', marginBottom: '1rem' }}>
-                  {prod.descripcion}
-                </p>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '1rem'
-                }}>
-                  <span style={{ fontSize: '1.5rem', fontWeight: '600' }}>
-                    ${prod.precio.toLocaleString('es-MX')} MXN
-                  </span>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: '500', marginBottom: '0.5rem' }}>{prod.nombre}</h3>
+                <p style={{ color: '#666', fontSize: '0.95rem', marginBottom: '1rem' }}>{prod.descripcion}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <span style={{ fontSize: '1.5rem', fontWeight: '600' }}>${prod.precio.toLocaleString('es-MX')} MXN</span>
                 </div>
                 <button
-                  onClick={() => manejarPago(prod)}
+                  onClick={() => iniciarPago(prod)}
                   disabled={cargandoPago}
                   style={{
                     width: '100%',
@@ -667,7 +569,7 @@ export default function TiendaSoftware() {
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  {cargandoPago ? '⏳ Procesando...' : '💳 Comprar con Stripe'}
+                  {cargandoPago ? '⏳ Procesando...' : '💳 Comprar ahora'}
                 </button>
               </div>
             </div>

@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import Stripe from 'stripe';
 import fs from 'fs';
+import nodemailer from 'nodemailer';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -68,7 +69,8 @@ if (productosDB.length === 0) {
       descripcion: 'Sistema de punto de venta para restaurantes y tiendas',
       imagen: 'https://placehold.co/600x400/1a1a1a/ffffff?text=POS+Pro',
       video: '',
-      fecha: new Date().toISOString()
+      fecha: new Date().toISOString(),
+      enlaceDescarga: 'https://ejemplo.com/descargas/pos-pro.zip'
     },
     {
       id: 2,
@@ -77,7 +79,8 @@ if (productosDB.length === 0) {
       descripcion: 'Herramienta de gestión con metodología ágil',
       imagen: 'https://placehold.co/600x400/333333/ffffff?text=Gestor+Ágil',
       video: '',
-      fecha: new Date().toISOString()
+      fecha: new Date().toISOString(),
+      enlaceDescarga: 'https://ejemplo.com/descargas/gestor-agil.zip'
     }
   ];
   guardarProductos(ejemplos);
@@ -85,7 +88,25 @@ if (productosDB.length === 0) {
 }
 
 // ==========================================
-// 3. RUTAS DE LA API
+// 3. CONFIGURACIÓN DE CORREO
+// ==========================================
+const crearTransporter = () => {
+  if (!process.env.TU_CORREO || !process.env.CONTRASENA_APP) {
+    console.error('❌ Variables de correo no configuradas');
+    return null;
+  }
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.TU_CORREO,
+      pass: process.env.CONTRASENA_APP
+    },
+    tls: { rejectUnauthorized: false }
+  });
+};
+
+// ==========================================
+// 4. RUTAS DE LA API
 // ==========================================
 
 // Obtener todos los productos
@@ -100,7 +121,7 @@ app.post('/api/productos', (req, res) => {
   console.log('📦 Datos:', req.body);
   
   try {
-    const { nombre, precio, descripcion, imagen, video } = req.body;
+    const { nombre, precio, descripcion, imagen, video, enlaceDescarga } = req.body;
     
     if (!nombre || !precio) {
       console.log('❌ Faltan datos obligatorios');
@@ -114,6 +135,7 @@ app.post('/api/productos', (req, res) => {
       descripcion: descripcion || '',
       imagen: imagen || '',
       video: video || '',
+      enlaceDescarga: enlaceDescarga || '',
       fecha: new Date().toISOString()
     };
 
@@ -148,7 +170,7 @@ app.put('/api/productos/:id', (req, res) => {
   console.log('✏️ PUT /api/productos/', req.params.id);
   try {
     const id = Number(req.params.id);
-    const { nombre, precio, descripcion, imagen, video } = req.body;
+    const { nombre, precio, descripcion, imagen, video, enlaceDescarga } = req.body;
     
     const index = productosDB.findIndex(p => p.id === id);
     if (index === -1) {
@@ -161,7 +183,8 @@ app.put('/api/productos/:id', (req, res) => {
       precio: precio !== undefined ? Number(precio) : productosDB[index].precio,
       descripcion: descripcion !== undefined ? descripcion : productosDB[index].descripcion,
       imagen: imagen !== undefined ? imagen : productosDB[index].imagen,
-      video: video !== undefined ? video : productosDB[index].video
+      video: video !== undefined ? video : productosDB[index].video,
+      enlaceDescarga: enlaceDescarga !== undefined ? enlaceDescarga : productosDB[index].enlaceDescarga
     };
 
     guardarProductos(productosDB);
@@ -173,7 +196,7 @@ app.put('/api/productos/:id', (req, res) => {
 });
 
 // ==========================================
-// 4. STRIPE (PAGOS)
+// 5. STRIPE (PAGOS)
 // ==========================================
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -181,14 +204,16 @@ app.post('/api/crear-sesion-pago', async (req, res) => {
   console.log('🔍 Recibida solicitud de pago');
   
   try {
-    const { nombre, precio, descripcion } = req.body;
+    const { nombre, precio, descripcion, email, enlaceDescarga } = req.body;
 
     if (!nombre || !precio || precio <= 0) {
       return res.status(400).json({ error: 'Datos del producto inválidos' });
     }
 
+    // Crear la sesión de pago con el email del cliente
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
+      customer_email: email || undefined,
       line_items: [{
         price_data: {
           currency: 'mxn',
@@ -203,6 +228,10 @@ app.post('/api/crear-sesion-pago', async (req, res) => {
       mode: 'payment',
       success_url: 'https://prototipica-estudio.onrender.com?success=true',
       cancel_url: 'https://prototipica-estudio.onrender.com?canceled=true',
+      metadata: {
+        producto: nombre,
+        enlace_descarga: enlaceDescarga || 'https://prototipica-estudio.onrender.com'
+      }
     });
 
     console.log('✅ Sesión creada:', session.id);
@@ -214,7 +243,102 @@ app.post('/api/crear-sesion-pago', async (req, res) => {
 });
 
 // ==========================================
-// 5. SERVIR FRONTEND (Siempre al final)
+// 6. WEBHOOK DE STRIPE (Para enviar correo después del pago)
+// ==========================================
+app.post('/api/webhook-stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  console.log('🔔 Webhook recibido');
+
+  try {
+    let event;
+    if (webhookSecret) {
+      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    } else {
+      event = JSON.parse(req.body.toString());
+    }
+
+    console.log('📦 Evento:', event.type);
+
+    // Manejar pago exitoso
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object;
+      const email = session.customer_details?.email || session.customer_email;
+      const producto = session.metadata?.producto || 'Software';
+      const enlaceDescarga = session.metadata?.enlace_descarga || 'https://prototipica-estudio.onrender.com';
+
+      console.log(`💰 Pago exitoso: ${email} compró ${producto}`);
+
+      // Enviar correo con el enlace de descarga
+      if (email && process.env.TU_CORREO) {
+        const transporter = crearTransporter();
+        if (transporter) {
+          try {
+            await transporter.sendMail({
+              from: `"Prototipica Estudio" <${process.env.TU_CORREO}>`,
+              to: email,
+              subject: `✅ Tu compra de "${producto}" está lista`,
+              html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <meta charset="UTF-8">
+                  <style>
+                    body { font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .header { background: #1a1a1a; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
+                    .content { background: #f9f9f9; padding: 25px; border-radius: 0 0 8px 8px; border: 1px solid #ddd; }
+                    .btn { display: inline-block; background: #1a1a1a; color: white; padding: 12px 30px; border-radius: 40px; text-decoration: none; font-weight: 500; }
+                    .footer { margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd; text-align: center; font-size: 12px; color: #999; }
+                  </style>
+                </head>
+                <body>
+                  <div class="header">
+                    <h1>🎉 ¡Gracias por tu compra!</h1>
+                    <p>Prototipica Estudio</p>
+                  </div>
+                  <div class="content">
+                    <h2>${producto}</h2>
+                    <p>Tu pago ha sido procesado correctamente. Haz clic en el botón para descargar tu software:</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                      <a href="${enlaceDescarga}" class="btn">📥 Descargar software</a>
+                    </div>
+                    <p style="font-size: 14px; color: #666;">
+                      <strong>Instrucciones:</strong><br>
+                      1. Descarga el archivo<br>
+                      2. Descomprime en tu computadora<br>
+                      3. Sigue las instrucciones de instalación<br>
+                      4. Si tienes problemas, responde a este correo
+                    </p>
+                    <p style="font-size: 14px; color: #666;">
+                      <strong>Licencia:</strong> Este software es de uso personal. No compartas el enlace de descarga.
+                    </p>
+                  </div>
+                  <div class="footer">
+                    <p>© 2026 Prototipica Estudio</p>
+                    <p>${process.env.TU_CORREO}</p>
+                  </div>
+                </body>
+                </html>
+              `
+            });
+            console.log('✅ Correo de descarga enviado a:', email);
+          } catch (error) {
+            console.error('❌ Error al enviar correo:', error);
+          }
+        }
+      }
+    }
+
+    res.json({ received: true });
+  } catch (error) {
+    console.error('❌ Error en webhook:', error);
+    res.status(400).json({ error: 'Webhook error' });
+  }
+});
+
+// ==========================================
+// 7. SERVIR FRONTEND (Siempre al final)
 // ==========================================
 app.use(express.static(path.join(__dirname, '../dist')));
 
@@ -223,7 +347,7 @@ app.get('*', (req, res) => {
 });
 
 // ==========================================
-// 6. INICIAR SERVIDOR
+// 8. INICIAR SERVIDOR
 // ==========================================
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
