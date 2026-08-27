@@ -21,10 +21,12 @@ app.use(express.json({ limit: '10mb' }));
 // 2. BASE DE DATOS LOCAL (archivo JSON)
 // ==========================================
 const DB_PATH = path.join(__dirname, '../data/productos.json');
+const DATA_DIR = path.join(__dirname, '../data');
 
 // Crear carpeta data si no existe
-if (!fs.existsSync(path.join(__dirname, '../data'))) {
-  fs.mkdirSync(path.join(__dirname, '../data'));
+if (!fs.existsSync(DATA_DIR)) {
+  console.log('📁 Creando carpeta data...');
+  fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
 // Leer productos del archivo
@@ -32,10 +34,12 @@ const leerProductos = () => {
   try {
     if (fs.existsSync(DB_PATH)) {
       const data = fs.readFileSync(DB_PATH, 'utf8');
-      return JSON.parse(data);
+      const productos = JSON.parse(data);
+      console.log(`📦 ${productos.length} productos cargados desde archivo`);
+      return productos;
     }
   } catch (error) {
-    console.error('Error al leer productos:', error);
+    console.error('❌ Error al leer productos:', error.message);
   }
   return [];
 };
@@ -44,44 +48,41 @@ const leerProductos = () => {
 const guardarProductos = (productos) => {
   try {
     fs.writeFileSync(DB_PATH, JSON.stringify(productos, null, 2));
+    console.log(`💾 ${productos.length} productos guardados en archivo`);
     return true;
   } catch (error) {
-    console.error('Error al guardar productos:', error);
+    console.error('❌ Error al guardar productos:', error.message);
     return false;
   }
 };
 
 // Inicializar con productos de ejemplo si no hay
-const inicializarProductos = () => {
-  const productos = leerProductos();
-  if (productos.length === 0) {
-    const ejemplos = [
-      {
-        id: 1,
-        nombre: 'Sistema POS Pro',
-        precio: 2999,
-        descripcion: 'Sistema de punto de venta para restaurantes y tiendas',
-        imagen: 'https://placehold.co/600x400/1a1a1a/ffffff?text=POS+Pro',
-        video: '',
-        fecha: new Date().toISOString()
-      },
-      {
-        id: 2,
-        nombre: 'Gestor de Proyectos Ágil',
-        precio: 1499,
-        descripcion: 'Herramienta de gestión con metodología ágil',
-        imagen: 'https://placehold.co/600x400/333333/ffffff?text=Gestor+Ágil',
-        video: '',
-        fecha: new Date().toISOString()
-      }
-    ];
-    guardarProductos(ejemplos);
-    return ejemplos;
-  }
-  return productos;
-};
-
-let productosDB = inicializarProductos();
+let productosDB = leerProductos();
+if (productosDB.length === 0) {
+  console.log('📦 No hay productos, creando ejemplos...');
+  const ejemplos = [
+    {
+      id: 1,
+      nombre: 'Sistema POS Pro',
+      precio: 2999,
+      descripcion: 'Sistema de punto de venta para restaurantes y tiendas',
+      imagen: 'https://placehold.co/600x400/1a1a1a/ffffff?text=POS+Pro',
+      video: '',
+      fecha: new Date().toISOString()
+    },
+    {
+      id: 2,
+      nombre: 'Gestor de Proyectos Ágil',
+      precio: 1499,
+      descripcion: 'Herramienta de gestión con metodología ágil',
+      imagen: 'https://placehold.co/600x400/333333/ffffff?text=Gestor+Ágil',
+      video: '',
+      fecha: new Date().toISOString()
+    }
+  ];
+  guardarProductos(ejemplos);
+  productosDB = ejemplos;
+}
 
 // ==========================================
 // 3. RUTAS DE LA API
@@ -89,21 +90,26 @@ let productosDB = inicializarProductos();
 
 // Obtener todos los productos
 app.get('/api/productos', (req, res) => {
+  console.log('📋 GET /api/productos - Enviando', productosDB.length, 'productos');
   res.json(productosDB);
 });
 
 // Agregar producto
 app.post('/api/productos', (req, res) => {
+  console.log('➕ POST /api/productos - Recibiendo producto');
+  console.log('📦 Datos:', req.body);
+  
   try {
     const { nombre, precio, descripcion, imagen, video } = req.body;
     
     if (!nombre || !precio) {
+      console.log('❌ Faltan datos obligatorios');
       return res.status(400).json({ error: 'Nombre y precio son obligatorios' });
     }
 
     const nuevoProducto = {
       id: Date.now(),
-      nombre,
+      nombre: nombre.trim(),
       precio: Number(precio),
       descripcion: descripcion || '',
       imagen: imagen || '',
@@ -111,30 +117,35 @@ app.post('/api/productos', (req, res) => {
       fecha: new Date().toISOString()
     };
 
+    console.log('✅ Producto creado:', nuevoProducto);
+
     productosDB.push(nuevoProducto);
     guardarProductos(productosDB);
     
     res.status(201).json(nuevoProducto);
   } catch (error) {
-    console.error('Error al agregar producto:', error);
-    res.status(500).json({ error: 'Error al agregar producto' });
+    console.error('❌ Error al agregar producto:', error);
+    res.status(500).json({ error: 'Error al agregar producto: ' + error.message });
   }
 });
 
 // Eliminar producto
 app.delete('/api/productos/:id', (req, res) => {
+  console.log('🗑️ DELETE /api/productos/', req.params.id);
   try {
     const id = Number(req.params.id);
     productosDB = productosDB.filter(p => p.id !== id);
     guardarProductos(productosDB);
     res.json({ success: true });
   } catch (error) {
+    console.error('❌ Error al eliminar:', error);
     res.status(500).json({ error: 'Error al eliminar producto' });
   }
 });
 
 // Actualizar producto
 app.put('/api/productos/:id', (req, res) => {
+  console.log('✏️ PUT /api/productos/', req.params.id);
   try {
     const id = Number(req.params.id);
     const { nombre, precio, descripcion, imagen, video } = req.body;
@@ -156,6 +167,7 @@ app.put('/api/productos/:id', (req, res) => {
     guardarProductos(productosDB);
     res.json(productosDB[index]);
   } catch (error) {
+    console.error('❌ Error al actualizar:', error);
     res.status(500).json({ error: 'Error al actualizar producto' });
   }
 });
@@ -216,5 +228,6 @@ app.get('*', (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
   console.log(`📦 Productos cargados: ${productosDB.length}`);
+  console.log(`📁 DB Path: ${DB_PATH}`);
   console.log(`💳 Stripe: ${process.env.STRIPE_SECRET_KEY ? '✅' : '❌'}`);
 });

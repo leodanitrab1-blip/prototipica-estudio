@@ -11,6 +11,7 @@ export default function TiendaSoftware() {
   const [errorPassword, setErrorPassword] = useState('');
   const [cargandoPago, setCargandoPago] = useState(false);
   const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState('');
   const ADMIN_PASSWORD = 'prototipica2026';
 
   // Cargar productos desde el backend
@@ -21,21 +22,29 @@ export default function TiendaSoftware() {
   const cargarProductos = async () => {
     try {
       setCargando(true);
+      setError('');
+      console.log('📦 Cargando productos...');
       const response = await fetch('/api/productos');
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Productos cargados:', data.length);
         setProductos(data);
       } else {
-        console.error('Error al cargar productos');
+        const errorData = await response.json();
+        console.error('❌ Error al cargar productos:', errorData);
+        setError('Error al cargar productos: ' + (errorData.error || 'Error desconocido'));
       }
     } catch (error) {
-      console.error('Error de conexión:', error);
+      console.error('❌ Error de conexión:', error);
+      setError('Error de conexión con el servidor');
     } finally {
       setCargando(false);
     }
   };
 
   const agregarProducto = async () => {
+    console.log('➕ Intentando agregar producto...');
+    
     const nuevo = {
       nombre: 'Nuevo software',
       precio: 0,
@@ -45,17 +54,29 @@ export default function TiendaSoftware() {
     };
 
     try {
+      setError('');
       const response = await fetch('/api/productos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(nuevo)
       });
+      
+      console.log('📡 Respuesta del servidor:', response.status);
+      
       if (response.ok) {
         const producto = await response.json();
+        console.log('✅ Producto agregado:', producto);
         setProductos([...productos, producto]);
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Error del servidor:', errorData);
+        setError('Error al agregar: ' + (errorData.error || 'Error desconocido'));
+        alert('Error al agregar producto: ' + (errorData.error || 'Error desconocido'));
       }
     } catch (error) {
-      console.error('Error al agregar producto:', error);
+      console.error('❌ Error de conexión:', error);
+      setError('Error de conexión con el servidor');
+      alert('Error de conexión. Revisa tu internet.');
     }
   };
 
@@ -175,6 +196,19 @@ export default function TiendaSoftware() {
           {productos.length} productos
         </span>
       </div>
+
+      {error && (
+        <div style={{
+          background: '#fff0f0',
+          border: '1px solid #ffcdd2',
+          borderRadius: '8px',
+          padding: '0.8rem 1.2rem',
+          color: '#c62828',
+          marginBottom: '1rem'
+        }}>
+          ⚠️ {error}
+        </div>
+      )}
 
       {mostrarLogin && !modoAdmin && (
         <div style={{
@@ -342,8 +376,13 @@ export default function TiendaSoftware() {
               border: 'none',
               borderRadius: '8px',
               width: '100%',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              fontSize: '1rem',
+              fontWeight: '500',
+              transition: 'background 0.2s ease'
             }}
+            onMouseEnter={(e) => e.target.style.background = '#333'}
+            onMouseLeave={(e) => e.target.style.background = '#1a1a1a'}
           >
             + Agregar producto
           </button>
