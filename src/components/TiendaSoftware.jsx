@@ -64,7 +64,9 @@ export default function TiendaSoftware() {
     setCargandoPago(true);
     try {
       const stripe = await loadStripe(STRIPE_PUBLIC_KEY);
-      const response = await fetch('https://prototipica-estudio-backend.onrender.com/api/crear-sesion-pago', {
+      
+      // ✅ Usamos la URL completa para asegurar que llega al backend
+      const response = await fetch('/api/crear-sesion-pago', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -74,12 +76,20 @@ export default function TiendaSoftware() {
           descripcion: producto.descripcion
         })
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al crear la sesión de pago');
+      }
+      
       const session = await response.json();
       const result = await stripe.redirectToCheckout({ sessionId: session.id });
+      
       if (result.error) {
         alert('Error al procesar el pago: ' + result.error.message);
       }
     } catch (error) {
+      console.error('Error en Stripe:', error);
       alert('Error al conectar con Stripe. Intenta nuevamente.');
     } finally {
       setCargandoPago(false);
