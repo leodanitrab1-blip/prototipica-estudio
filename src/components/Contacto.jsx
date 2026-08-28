@@ -14,42 +14,39 @@ export default function Contacto() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setEnviando(true);
-
+    
     if (!form.nombre || !form.email || !form.mensaje) {
-      setError('Completa todos los campos');
-      setEnviando(false);
+      setError('⚠️ Todos los campos son obligatorios.');
       return;
     }
 
+    setError('');
+    setEnviando(true);
+    setEnviado(false);
+
     try {
-      // ✅ Usamos URL RELATIVA (funciona porque frontend y backend están en el mismo dominio)
       const response = await fetch('/api/enviar-correo', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json' 
+        headers: {
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          ...form, 
-          tipo: 'contacto' 
-        })
+        body: JSON.stringify({
+          ...form,
+          tipo: 'contacto'
+        }),
       });
 
-      console.log('📡 Respuesta del servidor:', response.status);
+      const data = await response.json();
 
       if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Correo enviado:', data);
         setEnviado(true);
         setForm({ nombre: '', email: '', mensaje: '' });
       } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Error al enviar. Intenta nuevamente.');
+        setError(data.error || '❌ Error al enviar el mensaje.');
       }
-    } catch (error) {
-      console.error('❌ Error en contacto:', error);
-      setError('Error de conexión. Revisa tu internet.');
+    } catch (err) {
+      console.error('Error de red:', err);
+      setError('❌ No se pudo conectar con el servidor. Inténtalo de nuevo.');
     } finally {
       setEnviando(false);
     }
@@ -58,9 +55,7 @@ export default function Contacto() {
   return (
     <div style={{ maxWidth: '700px', margin: '0 auto', padding: '1rem' }}>
       <h2 style={{ fontSize: '2rem', fontWeight: '300', marginBottom: '0.5rem' }}>📬 Contacto</h2>
-      <p style={{ color: '#666', marginBottom: '2rem' }}>
-        ¿Tienes alguna pregunta? Contáctanos.
-      </p>
+      <p style={{ color: '#666', marginBottom: '2rem' }}>¿Tienes alguna pregunta? Contáctanos.</p>
 
       <div style={{
         display: 'grid',
@@ -106,7 +101,7 @@ export default function Contacto() {
               color: '#c62828', 
               marginBottom: '1rem' 
             }}>
-              ⚠️ {error}
+              {error}
             </div>
           )}
           
@@ -151,7 +146,7 @@ export default function Contacto() {
             disabled={enviando} 
             style={{
               width: '100%',
-              background: '#1a1a1a',
+              background: enviando ? '#888' : '#1a1a1a',
               color: 'white',
               padding: '1rem',
               border: 'none',
@@ -161,7 +156,7 @@ export default function Contacto() {
               opacity: enviando ? 0.7 : 1
             }}
           >
-            {enviando ? 'Enviando...' : '📩 Enviar mensaje'}
+            {enviando ? '⏳ Enviando...' : '📩 Enviar mensaje'}
           </button>
         </form>
       )}

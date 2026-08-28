@@ -19,42 +19,39 @@ export default function Cotizar() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setEnviando(true);
-
+    
     if (!form.nombre || !form.email || !form.descripcion) {
-      setError('Completa los campos obligatorios (*)');
-      setEnviando(false);
+      setError('⚠️ Los campos Nombre, Correo y Descripción son obligatorios.');
       return;
     }
 
+    setError('');
+    setEnviando(true);
+    setEnviado(false);
+
     try {
-      // ✅ Usamos URL RELATIVA
       const response = await fetch('/api/enviar-correo', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json' 
+        headers: {
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          ...form, 
-          tipo: 'cotizacion' 
-        })
+        body: JSON.stringify({
+          ...form,
+          tipo: 'cotizacion'
+        }),
       });
 
-      console.log('📡 Respuesta del servidor:', response.status);
+      const data = await response.json();
 
       if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Cotización enviada:', data);
         setEnviado(true);
         setForm({ nombre: '', email: '', telefono: '', descripcion: '', presupuesto: '' });
       } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Error al enviar. Intenta nuevamente.');
+        setError(data.error || '❌ Error al enviar la cotización.');
       }
-    } catch (error) {
-      console.error('❌ Error en cotización:', error);
-      setError('Error de conexión. Revisa tu internet.');
+    } catch (err) {
+      console.error('Error de red:', err);
+      setError('❌ No se pudo conectar con el servidor. Inténtalo de nuevo.');
     } finally {
       setEnviando(false);
     }
@@ -98,7 +95,7 @@ export default function Cotizar() {
               color: '#c62828', 
               marginBottom: '1rem' 
             }}>
-              ⚠️ {error}
+              {error}
             </div>
           )}
           
@@ -165,17 +162,16 @@ export default function Cotizar() {
             disabled={enviando} 
             style={{
               width: '100%',
-              background: '#1a1a1a',
+              background: enviando ? '#888' : '#1a1a1a',
               color: 'white',
               padding: '1rem',
               border: 'none',
               borderRadius: '40px',
               fontSize: '1rem',
-              cursor: enviando ? 'not-allowed' : 'pointer',
-              opacity: enviando ? 0.7 : 1
+              cursor: enviando ? 'not-allowed' : 'pointer'
             }}
           >
-            {enviando ? 'Enviando...' : '📩 Enviar cotización'}
+            {enviando ? '⏳ Enviando...' : '📩 Enviar cotización'}
           </button>
         </form>
       )}
