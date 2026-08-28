@@ -13,9 +13,15 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ==========================================
-// 1. CONFIGURACIÓN INICIAL
+// 1. CONFIGURACIÓN DE CORS (PERMITIR TODO)
 // ==========================================
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+app.options('*', cors());
 app.use(express.json({ limit: '10mb' }));
 
 // ==========================================
@@ -24,13 +30,11 @@ app.use(express.json({ limit: '10mb' }));
 const DB_PATH = path.join(__dirname, '../data/productos.json');
 const DATA_DIR = path.join(__dirname, '../data');
 
-// Crear carpeta data si no existe
 if (!fs.existsSync(DATA_DIR)) {
   console.log('📁 Creando carpeta data...');
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// Leer productos del archivo
 const leerProductos = () => {
   try {
     if (fs.existsSync(DB_PATH)) {
@@ -45,7 +49,6 @@ const leerProductos = () => {
   return [];
 };
 
-// Guardar productos en el archivo
 const guardarProductos = (productos) => {
   try {
     fs.writeFileSync(DB_PATH, JSON.stringify(productos, null, 2));
@@ -57,7 +60,6 @@ const guardarProductos = (productos) => {
   }
 };
 
-// Inicializar con productos de ejemplo si no hay
 let productosDB = leerProductos();
 if (productosDB.length === 0) {
   console.log('📦 No hay productos, creando ejemplos...');
@@ -69,8 +71,8 @@ if (productosDB.length === 0) {
       descripcion: 'Sistema de punto de venta para restaurantes y tiendas',
       imagen: 'https://placehold.co/600x400/1a1a1a/ffffff?text=POS+Pro',
       video: '',
-      fecha: new Date().toISOString(),
-      enlaceDescarga: 'https://ejemplo.com/descargas/pos-pro.zip'
+      enlaceDescarga: 'https://ejemplo.com/descargas/pos-pro.zip',
+      fecha: new Date().toISOString()
     },
     {
       id: 2,
@@ -79,8 +81,8 @@ if (productosDB.length === 0) {
       descripcion: 'Herramienta de gestión con metodología ágil',
       imagen: 'https://placehold.co/600x400/333333/ffffff?text=Gestor+Ágil',
       video: '',
-      fecha: new Date().toISOString(),
-      enlaceDescarga: 'https://ejemplo.com/descargas/gestor-agil.zip'
+      enlaceDescarga: 'https://ejemplo.com/descargas/gestor-agil.zip',
+      fecha: new Date().toISOString()
     }
   ];
   guardarProductos(ejemplos);
@@ -196,12 +198,106 @@ app.put('/api/productos/:id', (req, res) => {
 });
 
 // ==========================================
-// 5. STRIPE (PAGOS)
+// 5. ENVÍO DE CORREO (CONTACTO Y COTIZACIÓN)
+// ==========================================
+app.post('/api/enviar-correo', async (req, res) => {
+  console.log('📧 Recibida solicitud de correo');
+  console.log('📝 Datos recibidos:', req.body);
+  
+  try {
+    const datos = req.body;
+    if (!datos || !datos.email) {
+      console.log('❌ Falta el correo electrónico');
+      return res.status(400).json({ error: 'Falta el correo electrónico' });
+    }
+
+    const transporter = crearTransporter();
+    if (!transporter) {
+      console.log('❌ Error al configurar el transporter');
+      return res.status(500).json({ error: 'Error al configurar el correo' });
+    }
+
+    const tipo = datos.tipo || 'contacto';
+    const asunto = tipo === 'cotizacion' 
+      ? '📋 Nueva Cotización - Prototipica Estudio' 
+      : '📬 Nuevo Mensaje de Contacto - Prototipica Estudio';
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #1a1a1a; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
+          .content { background: #f9f9f9; padding: 25px; border-radius: 0 0 8px 8px; border: 1px solid #ddd; }
+          .campo { margin-bottom: 12px; }
+          .campo-label { font-weight: bold; color: #555; }
+          .campo-valor { margin-left: 8px; color: #1a1a1a; }
+          .footer { margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd; text-align: center; font-size: 12px; color: #999; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>${tipo === 'cotizacion' ? '📋 Nueva Cotización' : '📬 Nuevo Mensaje de Contacto'}</h1>
+          <p>Prototipica Estudio</p>
+        </div>
+        <div class="content">
+          <div class="campo">
+            <span class="campo-label">👤 Nombre:</span>
+            <span class="campo-valor">${datos.nombre || 'No especificado'}</span>
+          </div>
+          <div class="campo">
+            <span class="campo-label">📧 Email:</span>
+            <span class="campo-valor">${datos.email}</span>
+          </div>
+          ${datos.telefono ? `<div class="campo"><span class="campo-label">📱 Teléfono:</span><span class="campo-valor">${datos.telefono}</span></div>` : ''}
+          ${datos.presupuesto ? `<div class="campo"><span class="campo-label">💰 Presupuesto:</span><span class="campo-valor">$${Number(datos.presupuesto).toLocaleString('es-MX')} MXN</span></div>` : ''}
+          <hr>
+          <div class="campo">
+            <span class="campo-label">📝 ${tipo === 'cotizacion' ? 'Descripción del proyecto:' : 'Mensaje:'}</span>
+            <div style="background: white; padding: 12px; border-radius: 6px; margin-top: 6px; border: 1px solid #eee;">
+              ${datos.descripcion || datos.mensaje || 'No especificado'}
+            </div>
+          </div>
+        </div>
+        <div class="footer">
+          <p>© ${new Date().getFullYear()} Prototipica Estudio</p>
+          <p>Responder a: ${datos.email}</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const mailOptions = {
+      from: `"Prototipica Estudio" <${process.env.TU_CORREO}>`,
+      to: process.env.TU_CORREO,
+      replyTo: datos.email,
+      subject: asunto,
+      html: html,
+      text: `Nuevo mensaje de ${datos.nombre || 'cliente'} (${datos.email})\n\n${datos.descripcion || datos.mensaje || ''}`
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Correo enviado:', info.messageId);
+    res.json({ success: true, message: 'Correo enviado correctamente' });
+  } catch (error) {
+    console.error('❌ Error al enviar correo:', error);
+    res.status(500).json({ 
+      error: 'Error al enviar correo', 
+      details: error.message 
+    });
+  }
+});
+
+// ==========================================
+// 6. STRIPE (PAGOS)
 // ==========================================
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 app.post('/api/crear-sesion-pago', async (req, res) => {
   console.log('🔍 Recibida solicitud de pago');
+  console.log('📦 Producto:', req.body);
   
   try {
     const { nombre, precio, descripcion, email, enlaceDescarga } = req.body;
@@ -210,7 +306,6 @@ app.post('/api/crear-sesion-pago', async (req, res) => {
       return res.status(400).json({ error: 'Datos del producto inválidos' });
     }
 
-    // Crear la sesión de pago con el email del cliente
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       customer_email: email || undefined,
@@ -243,7 +338,7 @@ app.post('/api/crear-sesion-pago', async (req, res) => {
 });
 
 // ==========================================
-// 6. WEBHOOK DE STRIPE (Para enviar correo después del pago)
+// 7. WEBHOOK DE STRIPE (Entrega automática)
 // ==========================================
 app.post('/api/webhook-stripe', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
@@ -261,7 +356,6 @@ app.post('/api/webhook-stripe', express.raw({ type: 'application/json' }), async
 
     console.log('📦 Evento:', event.type);
 
-    // Manejar pago exitoso
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
       const email = session.customer_details?.email || session.customer_email;
@@ -270,7 +364,6 @@ app.post('/api/webhook-stripe', express.raw({ type: 'application/json' }), async
 
       console.log(`💰 Pago exitoso: ${email} compró ${producto}`);
 
-      // Enviar correo con el enlace de descarga
       if (email && process.env.TU_CORREO) {
         const transporter = crearTransporter();
         if (transporter) {
@@ -307,8 +400,7 @@ app.post('/api/webhook-stripe', express.raw({ type: 'application/json' }), async
                       <strong>Instrucciones:</strong><br>
                       1. Descarga el archivo<br>
                       2. Descomprime en tu computadora<br>
-                      3. Sigue las instrucciones de instalación<br>
-                      4. Si tienes problemas, responde a este correo
+                      3. Sigue las instrucciones de instalación
                     </p>
                     <p style="font-size: 14px; color: #666;">
                       <strong>Licencia:</strong> Este software es de uso personal. No compartas el enlace de descarga.
@@ -324,7 +416,7 @@ app.post('/api/webhook-stripe', express.raw({ type: 'application/json' }), async
             });
             console.log('✅ Correo de descarga enviado a:', email);
           } catch (error) {
-            console.error('❌ Error al enviar correo:', error);
+            console.error('❌ Error al enviar correo de descarga:', error);
           }
         }
       }
@@ -338,7 +430,7 @@ app.post('/api/webhook-stripe', express.raw({ type: 'application/json' }), async
 });
 
 // ==========================================
-// 7. SERVIR FRONTEND (Siempre al final)
+// 8. SERVIR FRONTEND (Siempre al final)
 // ==========================================
 app.use(express.static(path.join(__dirname, '../dist')));
 
@@ -347,11 +439,13 @@ app.get('*', (req, res) => {
 });
 
 // ==========================================
-// 8. INICIAR SERVIDOR
+// 9. INICIAR SERVIDOR
 // ==========================================
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
   console.log(`📦 Productos cargados: ${productosDB.length}`);
   console.log(`📁 DB Path: ${DB_PATH}`);
-  console.log(`💳 Stripe: ${process.env.STRIPE_SECRET_KEY ? '✅' : '❌'}`);
+  console.log(`📧 TU_CORREO: ${process.env.TU_CORREO || '❌ No configurado'}`);
+  console.log(`💳 Stripe: ${process.env.STRIPE_SECRET_KEY ? '✅ Configurado' : '❌ No configurado'}`);
+  console.log(`🔔 Webhook: ${process.env.STRIPE_WEBHOOK_SECRET ? '✅ Configurado' : '❌ No configurado'}`);
 });
