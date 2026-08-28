@@ -13,14 +13,18 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ============================================
-// 1. CORS - PERMITIR TODO
+// 1. CORS - CONFIGURACIÓN OPTIMIZADA
 // ============================================
-app.use(cors({
+const corsOptions = {
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
-app.options('*', cors());
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false,
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // ============================================
 // 2. MIDDLEWARE PARA PETICIONES JSON
@@ -28,11 +32,12 @@ app.options('*', cors());
 app.use(express.json({ limit: '10mb' }));
 
 // ============================================
-// 3. BASE DE DATOS LOCAL
+// 3. BASE DE DATOS LOCAL (MEJORADA)
 // ============================================
 const DB_PATH = path.join(__dirname, '../data/productos.json');
 const DATA_DIR = path.join(__dirname, '../data');
 
+// Asegurar que la carpeta data existe
 if (!fs.existsSync(DATA_DIR)) {
   console.log('📁 Creando carpeta data...');
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -42,7 +47,8 @@ const leerProductos = () => {
   try {
     if (fs.existsSync(DB_PATH)) {
       const data = fs.readFileSync(DB_PATH, 'utf8');
-      return JSON.parse(data);
+      const productos = JSON.parse(data);
+      return Array.isArray(productos) ? productos : [];
     }
   } catch (error) {
     console.error('❌ Error al leer productos:', error.message);
@@ -52,7 +58,7 @@ const leerProductos = () => {
 
 const guardarProductos = (productos) => {
   try {
-    fs.writeFileSync(DB_PATH, JSON.stringify(productos, null, 2));
+    fs.writeFileSync(DB_PATH, JSON.stringify(productos, null, 2), 'utf8');
     console.log(`💾 ${productos.length} productos guardados`);
     return true;
   } catch (error) {
@@ -61,6 +67,7 @@ const guardarProductos = (productos) => {
   }
 };
 
+// Inicializar productos
 let productosDB = leerProductos();
 if (productosDB.length === 0) {
   console.log('📦 Creando productos de ejemplo...');
@@ -90,34 +97,56 @@ if (productosDB.length === 0) {
 }
 
 // ============================================
-// 4. CONFIGURACIÓN DE CORREO
+// 4. CONFIGURACIÓN DE CORREO (MEJORADA)
 // ============================================
 const crearTransporter = () => {
+  // Verificar variables de entorno
   if (!process.env.TU_CORREO || !process.env.CONTRASENA_APP) {
     console.error('❌ Variables de correo no configuradas');
+    console.error('TU_CORREO:', process.env.TU_CORREO ? '✅' : '❌');
+    console.error('CONTRASENA_APP:', process.env.CONTRASENA_APP ? '✅' : '❌');
     return null;
   }
+
+  // Limpiar contraseña de espacios
+  const password = process.env.CONTRASENA_APP.replace(/\s+/g, '');
+  
+  console.log('📧 Configurando transporter con:', process.env.TU_CORREO);
+
   return nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // Usar SSL
     auth: {
       user: process.env.TU_CORREO,
-      pass: process.env.CONTRASENA_APP
+      pass: password
     },
-    tls: { rejectUnauthorized: false }
+    tls: {
+      rejectUnauthorized: false,
+      minVersion: 'TLSv1.2'
+    },
+    connectionTimeout: 10000, // 10 segundos
+    greetingTimeout: 10000,
+    socketTimeout: 15000
   });
 };
 
 // ============================================
-// 5. RUTAS DE API (TODAS LAS RUTAS /api)
+// 5. RUTAS DE API
 // ============================================
 
-// 5.1 Ruta de prueba
+// 5.1 Ruta de prueba mejorada
 app.get('/api/test', (req, res) => {
   console.log('🔍 GET /api/test - OK');
   res.json({ 
     status: 'ok', 
     message: 'Backend funcionando correctamente',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    environment: {
+      correo: process.env.TU_CORREO ? '✅' : '❌',
+      password: process.env.CONTRASENA_APP ? '✅' : '❌',
+      stripe: process.env.STRIPE_SECRET_KEY ? '✅' : '❌'
+    }
   });
 });
 
@@ -192,20 +221,42 @@ app.put('/api/productos/:id', (req, res) => {
   }
 });
 
-// 5.6 ENVIAR CORREO (CONTACTO Y COTIZACIÓN)
+// 5.6 ENVIAR CORREO (MEJORADO)
 app.post('/api/enviar-correo', async (req, res) => {
   console.log('📧 POST /api/enviar-correo');
-  console.log('📝 Datos recibidos:', req.body);
+  console.log('📝 Datos recibidos:', JSON.stringify(req.body, null, 2));
   
   try {
     const datos = req.body;
-    if (!datos || !datos.email) {
-      return res.status(400).json({ error: 'Falta el correo electrónico' });
+    
+    // Validación mejorada
+    if (!datos || !datos.email || !datos.email.includes('@')) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Correo electrónico inválido' 
+      });
     }
 
+    // Verificar si el transporter se puede crear
     const transporter = crearTransporter();
     if (!transporter) {
-      return res.status(500).json({ error: 'Error al configurar el correo' });
+      return res.status(500).json({ 
+        success: false,
+        error: 'Error al configurar el correo. Verifica las variables de entorno.' 
+      });
+    }
+
+    // Verificar la conexión antes de enviar
+    try {
+      await transporter.verify();
+      console.log('✅ Conexión con Gmail establecida');
+    } catch (verifyError) {
+      console.error('❌ Error al verificar conexión:', verifyError.message);
+      return res.status(500).json({ 
+        success: false,
+        error: 'No se pudo conectar con Gmail. Verifica la contraseña de aplicación.',
+        details: verifyError.message 
+      });
     }
 
     const tipo = datos.tipo || 'contacto';
@@ -214,13 +265,51 @@ app.post('/api/enviar-correo', async (req, res) => {
       : '📬 Nuevo Mensaje de Contacto';
 
     const html = `
-      <h2>${asunto}</h2>
-      <p><strong>Nombre:</strong> ${datos.nombre || 'No especificado'}</p>
-      <p><strong>Email:</strong> ${datos.email}</p>
-      ${datos.telefono ? `<p><strong>Teléfono:</strong> ${datos.telefono}</p>` : ''}
-      ${datos.presupuesto ? `<p><strong>Presupuesto:</strong> $${datos.presupuesto} MXN</p>` : ''}
-      <p><strong>${tipo === 'cotizacion' ? 'Descripción' : 'Mensaje'}:</strong></p>
-      <p>${datos.descripcion || datos.mensaje || 'No especificado'}</p>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #1a1a1a; color: white; padding: 20px; border-radius: 10px 10px 0 0; }
+          .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 10px 10px; }
+          .field { margin-bottom: 15px; }
+          .label { font-weight: bold; color: #333; }
+          .value { margin-top: 5px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h2>${asunto}</h2>
+          </div>
+          <div class="content">
+            <div class="field">
+              <div class="label">Nombre:</div>
+              <div class="value">${datos.nombre || 'No especificado'}</div>
+            </div>
+            <div class="field">
+              <div class="label">Email:</div>
+              <div class="value">${datos.email}</div>
+            </div>
+            ${datos.telefono ? `
+            <div class="field">
+              <div class="label">Teléfono:</div>
+              <div class="value">${datos.telefono}</div>
+            </div>` : ''}
+            ${datos.presupuesto ? `
+            <div class="field">
+              <div class="label">Presupuesto:</div>
+              <div class="value">$${datos.presupuesto} MXN</div>
+            </div>` : ''}
+            <div class="field">
+              <div class="label">${tipo === 'cotizacion' ? 'Descripción' : 'Mensaje'}:</div>
+              <div class="value">${datos.descripcion || datos.mensaje || 'No especificado'}</div>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
     `;
 
     const mailOptions = {
@@ -229,16 +318,24 @@ app.post('/api/enviar-correo', async (req, res) => {
       replyTo: datos.email,
       subject: `${asunto} - Prototipica Estudio`,
       html: html,
-      text: `Nuevo mensaje de ${datos.nombre || 'cliente'} (${datos.email})`
+      text: `Nuevo mensaje de ${datos.nombre || 'cliente'} (${datos.email})\n\n${datos.descripcion || datos.mensaje || 'Sin mensaje'}`
     };
 
-    console.log('📧 Enviando correo a:', process.env.TU_CORREO);
-    await transporter.sendMail(mailOptions);
-    console.log('✅ Correo enviado con éxito');
-    res.json({ success: true, message: 'Correo enviado correctamente' });
+    console.log('📧 Intentando enviar correo...');
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Correo enviado con éxito. ID:', info.messageId);
+    
+    res.json({ 
+      success: true, 
+      message: 'Correo enviado correctamente',
+      messageId: info.messageId 
+    });
+    
   } catch (error) {
     console.error('❌ Error al enviar correo:', error);
+    console.error('Stack trace:', error.stack);
     res.status(500).json({ 
+      success: false,
       error: 'Error al enviar correo', 
       details: error.message 
     });
@@ -307,7 +404,7 @@ app.post('/api/webhook-stripe', express.raw({ type: 'application/json' }), async
       const producto = session.metadata?.producto || 'Software';
       const enlaceDescarga = session.metadata?.enlace_descarga || 'https://prototipica-estudio.onrender.com';
 
-      if (email && process.env.TU_CORREO) {
+      if (email) {
         const transporter = crearTransporter();
         if (transporter) {
           await transporter.sendMail({
@@ -333,11 +430,11 @@ app.post('/api/webhook-stripe', express.raw({ type: 'application/json' }), async
 });
 
 // ============================================
-// 6. SERVIR FRONTEND (Siempre al FINAL)
+// 6. SERVIR FRONTEND
 // ============================================
 app.use(express.static(path.join(__dirname, '../dist')));
 
-// Todas las rutas que NO sean /api van al index.html
+// Ruta catch-all para SPA
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
@@ -346,9 +443,12 @@ app.get('*', (req, res) => {
 // 7. INICIAR SERVIDOR
 // ============================================
 app.listen(PORT, () => {
+  console.log('=================================');
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
   console.log(`📦 Productos cargados: ${productosDB.length}`);
-  console.log(`📧 TU_CORREO: ${process.env.TU_CORREO || '❌ No configurado'}`);
+  console.log(`📧 Correo configurado: ${process.env.TU_CORREO ? '✅' : '❌'}`);
+  console.log(`🔑 Contraseña app: ${process.env.CONTRASENA_APP ? '✅' : '❌'}`);
   console.log(`💳 Stripe: ${process.env.STRIPE_SECRET_KEY ? '✅' : '❌'}`);
   console.log(`🔔 Webhook: ${process.env.STRIPE_WEBHOOK_SECRET ? '✅' : '❌'}`);
+  console.log('=================================');
 });
