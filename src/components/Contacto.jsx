@@ -26,6 +26,9 @@ export default function Contacto() {
     setEnviando(true);
     setEnviado(false);
 
+    console.log('📤 Enviando a:', API_URL);
+    console.log('📦 Datos:', form);
+
     try {
       const response = await fetch(API_URL, {
         method: 'POST',
@@ -38,16 +41,20 @@ export default function Contacto() {
         }),
       });
 
-      const data = await response.json();
+      console.log('📡 Respuesta HTTP:', response.status);
 
       if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Éxito:', data);
         setEnviado(true);
         setForm({ nombre: '', email: '', mensaje: '' });
       } else {
-        setError(data.error || '❌ Error al enviar el mensaje.');
+        const errorData = await response.json();
+        console.error('❌ Error del servidor:', errorData);
+        setError(errorData.error || '❌ Error al enviar el mensaje.');
       }
     } catch (err) {
-      console.error('Error de red:', err);
+      console.error('❌ Error de red:', err);
       setError('❌ No se pudo conectar con el servidor. Inténtalo de nuevo.');
     } finally {
       setEnviando(false);
