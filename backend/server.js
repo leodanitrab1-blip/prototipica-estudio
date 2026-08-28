@@ -93,6 +93,10 @@ if (productosDB.length === 0) {
 // 3. CONFIGURACIÓN DE CORREO
 // ==========================================
 const crearTransporter = () => {
+  console.log('📧 Creando transporter...');
+  console.log('📧 TU_CORREO:', process.env.TU_CORREO ? '✅ Existe' : '❌ No existe');
+  console.log('📧 CONTRASENA_APP:', process.env.CONTRASENA_APP ? '✅ Existe' : '❌ No existe');
+  
   if (!process.env.TU_CORREO || !process.env.CONTRASENA_APP) {
     console.error('❌ Variables de correo no configuradas');
     return null;
@@ -278,6 +282,7 @@ app.post('/api/enviar-correo', async (req, res) => {
       text: `Nuevo mensaje de ${datos.nombre || 'cliente'} (${datos.email})\n\n${datos.descripcion || datos.mensaje || ''}`
     };
 
+    console.log('📧 Enviando correo a:', process.env.TU_CORREO);
     const info = await transporter.sendMail(mailOptions);
     console.log('✅ Correo enviado:', info.messageId);
     res.json({ success: true, message: 'Correo enviado correctamente' });
@@ -430,7 +435,19 @@ app.post('/api/webhook-stripe', express.raw({ type: 'application/json' }), async
 });
 
 // ==========================================
-// 8. SERVIR FRONTEND (Siempre al final)
+// 8. RUTA DE PRUEBA (para verificar que el backend responde)
+// ==========================================
+app.get('/api/test', (req, res) => {
+  console.log('🔍 GET /api/test - Backend funcionando');
+  res.json({ 
+    status: 'ok', 
+    message: 'Backend de Prototipica Estudio funcionando correctamente',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// ==========================================
+// 9. SERVIR FRONTEND (Siempre al final)
 // ==========================================
 app.use(express.static(path.join(__dirname, '../dist')));
 
@@ -439,7 +456,7 @@ app.get('*', (req, res) => {
 });
 
 // ==========================================
-// 9. INICIAR SERVIDOR
+// 10. INICIAR SERVIDOR
 // ==========================================
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);

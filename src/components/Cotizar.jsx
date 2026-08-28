@@ -29,7 +29,7 @@ export default function Cotizar() {
     }
 
     try {
-      // ✅ Usamos la URL completa del backend
+      // ✅ Usamos la URL COMPLETA de Render
       const response = await fetch('https://prototipica-estudio.onrender.com/api/enviar-correo', {
         method: 'POST',
         headers: { 
@@ -41,15 +41,23 @@ export default function Cotizar() {
         })
       });
 
+      // ✅ Leer la respuesta como texto para depuración
+      const respuestaTexto = await response.text();
+      console.log('📡 Respuesta del servidor:', respuestaTexto);
+
       if (response.ok) {
         setEnviado(true);
         setForm({ nombre: '', email: '', telefono: '', descripcion: '', presupuesto: '' });
       } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Error al enviar. Intenta nuevamente.');
+        try {
+          const errorData = JSON.parse(respuestaTexto);
+          setError(errorData.error || 'Error al enviar. Intenta nuevamente.');
+        } catch {
+          setError('Error al enviar: ' + respuestaTexto);
+        }
       }
     } catch (error) {
-      console.error('Error en cotización:', error);
+      console.error('❌ Error en cotización:', error);
       setError('Error de conexión. Revisa tu internet.');
     } finally {
       setEnviando(false);
