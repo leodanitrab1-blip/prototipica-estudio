@@ -7,6 +7,8 @@ export default function Contacto() {
   const [enviado, setEnviado] = useState(false);
   const [error, setError] = useState('');
 
+  const API_URL = 'https://prototipica-estudio.onrender.com/api/enviar-correo';
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
@@ -25,7 +27,7 @@ export default function Contacto() {
     setEnviado(false);
 
     try {
-      const response = await fetch('/api/enviar-correo', {
+      const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
