@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { FiSend, FiUser, FiMail, FiPhone, FiFileText, FiDollarSign, FiCheckCircle } from 'react-icons/fi';
 
-export default function Cotizar() {
+export default function Cotizar({ idioma }) {
   const [form, setForm] = useState({ 
     nombre: '', 
     email: '', 
@@ -12,6 +13,44 @@ export default function Cotizar() {
   const [enviado, setEnviado] = useState(false);
   const [error, setError] = useState('');
 
+  const textos = {
+    es: {
+      titulo: 'Cotizar Servicio',
+      descripcion: 'Cuéntanos tu idea y te enviaremos un presupuesto personalizado.',
+      nombre: 'Nombre',
+      email: 'Correo electrónico',
+      telefono: 'Teléfono (opcional)',
+      descripcionProyecto: 'Descripción del proyecto',
+      presupuesto: 'Presupuesto estimado (MXN)',
+      enviar: 'Enviar cotización',
+      enviando: 'Enviando...',
+      exito: '¡Cotización enviada!',
+      exitoDesc: 'Te contactaremos a la brevedad.',
+      enviarOtra: 'Enviar otra',
+      errorCampos: 'Los campos Nombre, Correo y Descripción son obligatorios.',
+      errorServidor: 'Error al enviar la cotización.',
+      errorRed: 'No se pudo conectar con el servidor. Inténtalo de nuevo.'
+    },
+    en: {
+      titulo: 'Request a Quote',
+      descripcion: 'Tell us your idea and we will send you a personalized quote.',
+      nombre: 'Name',
+      email: 'Email',
+      telefono: 'Phone (optional)',
+      descripcionProyecto: 'Project description',
+      presupuesto: 'Estimated budget (MXN)',
+      enviar: 'Send quote',
+      enviando: 'Sending...',
+      exito: 'Quote sent!',
+      exitoDesc: 'We will contact you shortly.',
+      enviarOtra: 'Send another',
+      errorCampos: 'Name, Email and Description fields are required.',
+      errorServidor: 'Error sending quote.',
+      errorRed: 'Could not connect to server. Please try again.'
+    }
+  };
+
+  const t = textos[idioma] || textos.es;
   const API_URL = 'https://prototipica-estudio.onrender.com/api/enviar-correo';
 
   const handleChange = (e) => {
@@ -23,16 +62,13 @@ export default function Cotizar() {
     e.preventDefault();
     
     if (!form.nombre || !form.email || !form.descripcion) {
-      setError('⚠️ Los campos Nombre, Correo y Descripción son obligatorios.');
+      setError('⚠️ ' + t.errorCampos);
       return;
     }
 
     setError('');
     setEnviando(true);
     setEnviado(false);
-
-    console.log('📤 Enviando a:', API_URL);
-    console.log('📦 Datos:', form);
 
     try {
       const response = await fetch(API_URL, {
@@ -46,124 +82,317 @@ export default function Cotizar() {
         }),
       });
 
-      console.log('📡 Respuesta HTTP:', response.status);
-
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Éxito:', data);
         setEnviado(true);
         setForm({ nombre: '', email: '', telefono: '', descripcion: '', presupuesto: '' });
       } else {
         const errorData = await response.json();
-        console.error('❌ Error del servidor:', errorData);
-        setError(errorData.error || '❌ Error al enviar la cotización.');
+        setError(errorData.error || '❌ ' + t.errorServidor);
       }
     } catch (err) {
-      console.error('❌ Error de red:', err);
-      setError('❌ No se pudo conectar con el servidor. Inténtalo de nuevo.');
+      setError('❌ ' + t.errorRed);
     } finally {
       setEnviando(false);
     }
   };
 
+  const inputStyle = {
+    width: '100%',
+    padding: '0.8rem 0.8rem 0.8rem 2.5rem',
+    border: '1px solid #ddd',
+    borderRadius: '12px',
+    fontSize: '1rem',
+    outline: 'none',
+    transition: 'all 0.3s ease',
+    fontFamily: "'Inter', sans-serif"
+  };
+
+  const iconStyle = {
+    position: 'absolute',
+    left: '0.8rem',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    color: '#999',
+    fontSize: '1rem',
+    pointerEvents: 'none'
+  };
+
   return (
-    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1rem' }}>
-      <h2 style={{ fontSize: '2rem', fontWeight: '300', marginBottom: '0.5rem' }}>📋 Cotizar Servicio</h2>
-      <p style={{ color: '#666', marginBottom: '2rem' }}>
-        Cuéntanos tu idea y te enviaremos un presupuesto personalizado.
-      </p>
+    <div style={{ maxWidth: '650px', margin: '0 auto', padding: '1rem' }}>
+      {/* Header */}
+      <div style={{
+        textAlign: 'center',
+        marginBottom: '2rem',
+        padding: '2rem 1rem',
+        background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
+        borderRadius: '24px',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        <div style={{
+          position: 'absolute',
+          top: '-50%',
+          right: '-50%',
+          width: '100%',
+          height: '100%',
+          background: 'radial-gradient(circle, rgba(201,169,110,0.2) 0%, transparent 70%)',
+          pointerEvents: 'none'
+        }} />
+        <h2 style={{ 
+          fontSize: '2rem', 
+          fontWeight: '300', 
+          marginBottom: '0.5rem',
+          color: 'white',
+          fontFamily: "'Playfair Display', serif",
+          position: 'relative'
+        }}>
+          📋 {t.titulo}
+        </h2>
+        <p style={{ 
+          color: '#ccc', 
+          marginBottom: 0,
+          position: 'relative',
+          fontSize: '0.95rem'
+        }}>
+          {t.descripcion}
+        </p>
+      </div>
 
       {enviado ? (
-        <div style={{ background: '#f0f7f0', border: '1px solid #c8e6c9', borderRadius: '12px', padding: '2rem', textAlign: 'center' }}>
-          <div style={{ fontSize: '3rem' }}>✅</div>
-          <h3 style={{ color: '#2e7d32' }}>¡Cotización enviada!</h3>
-          <p style={{ color: '#555' }}>Te contactaremos a la brevedad.</p>
+        <div style={{ 
+          background: '#f0f7f0', 
+          border: '1px solid #c8e6c9', 
+          borderRadius: '20px', 
+          padding: '3rem 2rem', 
+          textAlign: 'center',
+          animation: 'fadeInUp 0.5s ease'
+        }}>
+          <div style={{ 
+            width: '80px',
+            height: '80px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 1.5rem',
+            boxShadow: '0 10px 30px rgba(76,175,80,0.3)'
+          }}>
+            <FiCheckCircle size={40} color="white" />
+          </div>
+          <h3 style={{ 
+            color: '#2e7d32',
+            fontFamily: "'Playfair Display', serif",
+            fontSize: '1.5rem',
+            marginBottom: '0.5rem'
+          }}>
+            {t.exito}
+          </h3>
+          <p style={{ color: '#555', marginBottom: '1.5rem' }}>{t.exitoDesc}</p>
           <button 
             onClick={() => setEnviado(false)} 
             style={{
-              marginTop: '1rem',
               background: 'transparent',
               border: '2px solid #2e7d32',
               color: '#2e7d32',
-              padding: '0.5rem 1.5rem',
+              padding: '0.7rem 2rem',
               borderRadius: '40px',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              fontWeight: '600',
+              fontSize: '0.95rem',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#2e7d32';
+              e.currentTarget.style.color = 'white';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = '#2e7d32';
             }}
           >
-            Enviar otra
+            {t.enviarOtra}
           </button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} style={{
+          background: 'white',
+          padding: '2rem',
+          borderRadius: '20px',
+          boxShadow: '0 5px 30px rgba(0,0,0,0.08)'
+        }}>
           {error && (
             <div style={{ 
               background: '#fff0f0', 
               border: '1px solid #ffcdd2', 
-              padding: '0.8rem 1.2rem', 
-              borderRadius: '8px', 
+              padding: '1rem 1.2rem', 
+              borderRadius: '12px', 
               color: '#c62828', 
-              marginBottom: '1rem' 
+              marginBottom: '1.5rem',
+              animation: 'fadeIn 0.3s ease',
+              fontSize: '0.9rem'
             }}>
               {error}
             </div>
           )}
           
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.3rem' }}>Nombre *</label>
-            <input 
-              type="text" 
-              name="nombre" 
-              value={form.nombre} 
-              onChange={handleChange} 
-              required 
-              style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '8px', fontSize: '1rem' }}
-            />
+          <div style={{ marginBottom: '1.2rem' }}>
+            <label style={{ 
+              fontWeight: '600', 
+              display: 'block', 
+              marginBottom: '0.4rem',
+              fontSize: '0.9rem',
+              color: '#333'
+            }}>
+              {t.nombre} *
+            </label>
+            <div style={{ position: 'relative' }}>
+              <FiUser style={iconStyle} />
+              <input 
+                type="text" 
+                name="nombre" 
+                value={form.nombre} 
+                onChange={handleChange} 
+                required 
+                style={inputStyle}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#1a1a1a';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(26,26,26,0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#ddd';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+            </div>
           </div>
           
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.3rem' }}>Correo electrónico *</label>
-            <input 
-              type="email" 
-              name="email" 
-              value={form.email} 
-              onChange={handleChange} 
-              required 
-              style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '8px', fontSize: '1rem' }}
-            />
+          <div style={{ marginBottom: '1.2rem' }}>
+            <label style={{ 
+              fontWeight: '600', 
+              display: 'block', 
+              marginBottom: '0.4rem',
+              fontSize: '0.9rem',
+              color: '#333'
+            }}>
+              {t.email} *
+            </label>
+            <div style={{ position: 'relative' }}>
+              <FiMail style={iconStyle} />
+              <input 
+                type="email" 
+                name="email" 
+                value={form.email} 
+                onChange={handleChange} 
+                required 
+                style={inputStyle}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#1a1a1a';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(26,26,26,0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#ddd';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+            </div>
           </div>
           
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.3rem' }}>Teléfono (opcional)</label>
-            <input 
-              type="tel" 
-              name="telefono" 
-              value={form.telefono} 
-              onChange={handleChange} 
-              style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '8px', fontSize: '1rem' }}
-            />
+          <div style={{ marginBottom: '1.2rem' }}>
+            <label style={{ 
+              fontWeight: '600', 
+              display: 'block', 
+              marginBottom: '0.4rem',
+              fontSize: '0.9rem',
+              color: '#333'
+            }}>
+              {t.telefono}
+            </label>
+            <div style={{ position: 'relative' }}>
+              <FiPhone style={iconStyle} />
+              <input 
+                type="tel" 
+                name="telefono" 
+                value={form.telefono} 
+                onChange={handleChange} 
+                style={inputStyle}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#1a1a1a';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(26,26,26,0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#ddd';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+            </div>
           </div>
           
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.3rem' }}>Descripción del proyecto *</label>
-            <textarea 
-              name="descripcion" 
-              value={form.descripcion} 
-              onChange={handleChange} 
-              rows="4" 
-              required 
-              style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '8px', fontSize: '1rem', resize: 'vertical' }}
-            />
+          <div style={{ marginBottom: '1.2rem' }}>
+            <label style={{ 
+              fontWeight: '600', 
+              display: 'block', 
+              marginBottom: '0.4rem',
+              fontSize: '0.9rem',
+              color: '#333'
+            }}>
+              {t.descripcionProyecto} *
+            </label>
+            <div style={{ position: 'relative' }}>
+              <FiFileText style={{ ...iconStyle, top: '1rem' }} />
+              <textarea 
+                name="descripcion" 
+                value={form.descripcion} 
+                onChange={handleChange} 
+                rows="4" 
+                required 
+                style={{
+                  ...inputStyle,
+                  paddingLeft: '2.5rem',
+                  resize: 'vertical',
+                  minHeight: '100px'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#1a1a1a';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(26,26,26,0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#ddd';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+            </div>
           </div>
           
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.3rem' }}>Presupuesto estimado (MXN) (opcional)</label>
-            <input 
-              type="number" 
-              name="presupuesto" 
-              value={form.presupuesto} 
-              onChange={handleChange} 
-              style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '8px', fontSize: '1rem' }}
-            />
+            <label style={{ 
+              fontWeight: '600', 
+              display: 'block', 
+              marginBottom: '0.4rem',
+              fontSize: '0.9rem',
+              color: '#333'
+            }}>
+              {t.presupuesto}
+            </label>
+            <div style={{ position: 'relative' }}>
+              <FiDollarSign style={iconStyle} />
+              <input 
+                type="number" 
+                name="presupuesto" 
+                value={form.presupuesto} 
+                onChange={handleChange} 
+                style={inputStyle}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#1a1a1a';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(26,26,26,0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#ddd';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+            </div>
           </div>
           
           <button 
@@ -171,19 +400,76 @@ export default function Cotizar() {
             disabled={enviando} 
             style={{
               width: '100%',
-              background: enviando ? '#888' : '#1a1a1a',
+              background: enviando 
+                ? '#888' 
+                : 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
               color: 'white',
               padding: '1rem',
               border: 'none',
               borderRadius: '40px',
               fontSize: '1rem',
-              cursor: enviando ? 'not-allowed' : 'pointer'
+              fontWeight: '600',
+              cursor: enviando ? 'not-allowed' : 'pointer',
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              boxShadow: enviando ? 'none' : '0 4px 20px rgba(0,0,0,0.2)'
+            }}
+            onMouseEnter={(e) => {
+              if (!enviando) {
+                e.currentTarget.style.transform = 'translateY(-3px)';
+                e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.3)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!enviando) {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)';
+              }
             }}
           >
-            {enviando ? '⏳ Enviando...' : '📩 Enviar cotización'}
+            {enviando ? (
+              <>
+                <span style={{ 
+                  width: '20px',
+                  height: '20px',
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  borderTopColor: 'white',
+                  borderRadius: '50%',
+                  animation: 'spin 0.8s linear infinite'
+                }} />
+                {t.enviando}
+              </>
+            ) : (
+              <>
+                <FiSend /> {t.enviar}
+              </>
+            )}
           </button>
         </form>
       )}
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
