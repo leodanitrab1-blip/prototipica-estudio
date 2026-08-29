@@ -1,12 +1,68 @@
 import { useState, useEffect } from 'react';
+import { FiPlus, FiTrash2, FiX, FiLock, FiEdit3 } from 'react-icons/fi';
 
-export default function SeccionCentral() {
+export default function SeccionCentral({ cambiarPagina, idioma }) {
   const [noticias, setNoticias] = useState([]);
   const [modoAdmin, setModoAdmin] = useState(false);
   const [mostrarLogin, setMostrarLogin] = useState(false);
   const [password, setPassword] = useState('');
   const [errorPassword, setErrorPassword] = useState('');
   const ADMIN_PASSWORD = 'prototipica2026';
+
+  const textos = {
+    es: {
+      noticias: 'Noticias',
+      admin: 'Admin',
+      accesoAdmin: 'Acceso de administrador',
+      ingresaPassword: 'Ingresa la contraseña para administrar las noticias.',
+      contraseña: 'Contraseña...',
+      ingresar: 'Ingresar',
+      cancelar: 'Cancelar',
+      editorNoticias: 'Editor de Noticias',
+      cerrar: 'Cerrar',
+      agregarNoticia: 'Agregar noticia',
+      eliminar: 'Eliminar',
+      titulo: 'Título',
+      contenido: 'Contenido',
+      imagen: 'URL de imagen',
+      video: 'URL de video (YouTube)',
+      noHayNoticias: 'No hay noticias',
+      hazClic: 'Haz clic en "Noticias" para acceder al panel',
+      eliminarConfirm: '¿Eliminar esta noticia?',
+      errorPassword: 'Contraseña incorrecta',
+      bienvenido: 'Bienvenido a Prototipica Estudio',
+      descripcion: 'Software y soluciones digitales para tu negocio',
+      explorar: 'Explorar productos',
+      cotizar: 'Cotizar ahora'
+    },
+    en: {
+      noticias: 'News',
+      admin: 'Admin',
+      accesoAdmin: 'Admin Access',
+      ingresaPassword: 'Enter the password to manage news.',
+      contraseña: 'Password...',
+      ingresar: 'Login',
+      cancelar: 'Cancel',
+      editorNoticias: 'News Editor',
+      cerrar: 'Close',
+      agregarNoticia: 'Add news',
+      eliminar: 'Delete',
+      titulo: 'Title',
+      contenido: 'Content',
+      imagen: 'Image URL',
+      video: 'Video URL (YouTube)',
+      noHayNoticias: 'No news',
+      hazClic: 'Click on "News" to access the panel',
+      eliminarConfirm: 'Delete this news?',
+      errorPassword: 'Incorrect password',
+      bienvenido: 'Welcome to Prototipica Estudio',
+      descripcion: 'Software and digital solutions for your business',
+      explorar: 'Explore products',
+      cotizar: 'Get a quote'
+    }
+  };
+
+  const t = textos[idioma] || textos.es;
 
   useEffect(() => {
     const datos = localStorage.getItem('noticiasPrototipica');
@@ -26,7 +82,7 @@ export default function SeccionCentral() {
   };
 
   const eliminarNoticia = (id) => {
-    if (window.confirm('¿Eliminar esta noticia?')) {
+    if (window.confirm(t.eliminarConfirm)) {
       guardarNoticias(noticias.filter(n => n.id !== id));
     }
   };
@@ -52,66 +108,491 @@ export default function SeccionCentral() {
       setPassword('');
       setErrorPassword('');
     } else {
-      setErrorPassword('❌ Contraseña incorrecta');
+      setErrorPassword('❌ ' + t.errorPassword);
     }
   };
 
   return (
-    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '1rem' }}>
-      <h2 onClick={handleTituloClick} style={{ fontSize: '2rem', fontWeight: '300', cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        📰 Noticias
-        {modoAdmin && <span style={{ fontSize: '0.7rem', background: '#1a1a1a', color: 'white', padding: '0.2rem 0.8rem', borderRadius: '20px' }}>Admin</span>}
-      </h2>
+    <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '1rem' }}>
+      {/* Hero Section */}
+      <div style={{
+        textAlign: 'center',
+        padding: '3rem 1rem 2rem',
+        background: 'linear-gradient(180deg, #fafafa 0%, #ffffff 100%)',
+        borderRadius: '24px',
+        marginBottom: '2rem',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        <div style={{
+          position: 'absolute',
+          top: '-50%',
+          right: '-50%',
+          width: '100%',
+          height: '100%',
+          background: 'radial-gradient(circle, rgba(201,169,110,0.1) 0%, transparent 70%)',
+          pointerEvents: 'none'
+        }} />
+        <h1 style={{
+          fontFamily: "'Playfair Display', serif",
+          fontSize: 'clamp(2rem, 5vw, 3.5rem)',
+          fontWeight: '700',
+          marginBottom: '1rem',
+          background: 'linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+          position: 'relative'
+        }}>
+          {t.bienvenido}
+        </h1>
+        <p style={{
+          fontSize: 'clamp(1rem, 2vw, 1.2rem)',
+          color: '#666',
+          marginBottom: '2rem',
+          position: 'relative'
+        }}>
+          {t.descripcion}
+        </p>
+        <div style={{
+          display: 'flex',
+          gap: '1rem',
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+          position: 'relative'
+        }}>
+          <button
+            onClick={() => cambiarPagina && cambiarPagina('tienda')}
+            style={{
+              padding: '0.8rem 2rem',
+              background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '40px',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              fontWeight: '600',
+              transition: 'all 0.3s ease',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-3px)';
+              e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)';
+            }}
+          >
+            {t.explorar}
+          </button>
+          <button
+            onClick={() => cambiarPagina && cambiarPagina('cotizar')}
+            style={{
+              padding: '0.8rem 2rem',
+              background: 'transparent',
+              color: '#1a1a1a',
+              border: '2px solid #1a1a1a',
+              borderRadius: '40px',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              fontWeight: '600',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#1a1a1a';
+              e.currentTarget.style.color = 'white';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = '#1a1a1a';
+            }}
+          >
+            {t.cotizar}
+          </button>
+        </div>
+      </div>
 
+      {/* Título de noticias */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: '2rem',
+        padding: '0 0.5rem'
+      }}>
+        <h2 
+          onClick={handleTituloClick} 
+          style={{ 
+            fontSize: '1.8rem', 
+            fontWeight: '300', 
+            cursor: 'pointer', 
+            userSelect: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.8rem',
+            fontFamily: "'Playfair Display', serif",
+            margin: 0
+          }}
+        >
+          📰 {t.noticias}
+          {modoAdmin && (
+            <span style={{ 
+              fontSize: '0.7rem', 
+              background: '#1a1a1a', 
+              color: 'white', 
+              padding: '0.2rem 0.8rem', 
+              borderRadius: '20px',
+              fontFamily: "'Inter', sans-serif"
+            }}>
+              {t.admin}
+            </span>
+          )}
+        </h2>
+        {modoAdmin && (
+          <button
+            onClick={() => setModoAdmin(false)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#999',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.3rem'
+            }}
+          >
+            <FiX size={16} /> {t.cerrar}
+          </button>
+        )}
+      </div>
+
+      {/* Login modal */}
       {mostrarLogin && !modoAdmin && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ background: 'white', borderRadius: '16px', maxWidth: '400px', width: '100%', padding: '2rem', textAlign: 'center' }}>
-            <h3 style={{ marginBottom: '1rem' }}>🔒 Acceso de administrador</h3>
-            <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '1.5rem' }}>Ingresa la contraseña para administrar las noticias.</p>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Contraseña..." style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '8px', marginBottom: '0.8rem', fontSize: '1rem' }} onKeyPress={(e) => e.key === 'Enter' && handleLogin()} />
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          background: 'rgba(0,0,0,0.6)', 
+          backdropFilter: 'blur(8px)', 
+          zIndex: 9999, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          padding: '1rem' 
+        }}>
+          <div style={{ 
+            background: 'white', 
+            borderRadius: '20px', 
+            maxWidth: '400px', 
+            width: '100%', 
+            padding: '2rem', 
+            textAlign: 'center',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            animation: 'fadeInUp 0.3s ease'
+          }}>
+            <div style={{
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1rem',
+              color: '#c9a96e',
+              fontSize: '1.5rem'
+            }}>
+              <FiLock />
+            </div>
+            <h3 style={{ marginBottom: '0.5rem', fontFamily: "'Playfair Display', serif" }}>
+              {t.accesoAdmin}
+            </h3>
+            <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+              {t.ingresaPassword}
+            </p>
+            <input 
+              type="password" 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+              placeholder={t.contraseña} 
+              style={{ 
+                width: '100%', 
+                padding: '0.8rem', 
+                border: '1px solid #ddd', 
+                borderRadius: '12px', 
+                marginBottom: '0.8rem', 
+                fontSize: '1rem',
+                outline: 'none',
+                transition: 'border-color 0.3s ease'
+              }}
+              onFocus={(e) => e.target.style.borderColor = '#1a1a1a'}
+              onBlur={(e) => e.target.style.borderColor = '#ddd'}
+              onKeyPress={(e) => e.key === 'Enter' && handleLogin()} 
+            />
             {errorPassword && <p style={{ color: '#c62828', fontSize: '0.9rem', marginBottom: '0.8rem' }}>{errorPassword}</p>}
             <div style={{ display: 'flex', gap: '0.8rem' }}>
-              <button onClick={handleLogin} style={{ flex: 1, background: '#1a1a1a', color: 'white', padding: '0.8rem', border: 'none', borderRadius: '40px', cursor: 'pointer', fontSize: '1rem' }}>Ingresar</button>
-              <button onClick={() => { setMostrarLogin(false); setPassword(''); setErrorPassword(''); }} style={{ flex: 1, background: '#eee', color: '#333', padding: '0.8rem', border: 'none', borderRadius: '40px', cursor: 'pointer', fontSize: '1rem' }}>Cancelar</button>
+              <button 
+                onClick={handleLogin} 
+                style={{ 
+                  flex: 1, 
+                  background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)', 
+                  color: 'white', 
+                  padding: '0.8rem', 
+                  border: 'none', 
+                  borderRadius: '40px', 
+                  cursor: 'pointer', 
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                {t.ingresar}
+              </button>
+              <button 
+                onClick={() => { setMostrarLogin(false); setPassword(''); setErrorPassword(''); }} 
+                style={{ 
+                  flex: 1, 
+                  background: '#eee', 
+                  color: '#333', 
+                  padding: '0.8rem', 
+                  border: 'none', 
+                  borderRadius: '40px', 
+                  cursor: 'pointer', 
+                  fontSize: '1rem',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                {t.cancelar}
+              </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* Panel admin */}
       {modoAdmin && (
-        <div style={{ border: '2px dashed #1a1a1a', borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem', background: '#fafafa' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <h3>✏️ Editor de Noticias</h3>
-            <button onClick={() => setModoAdmin(false)} style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}>Cerrar</button>
+        <div style={{ 
+          border: '2px dashed #1a1a1a', 
+          borderRadius: '16px', 
+          padding: '1.5rem', 
+          marginBottom: '2rem', 
+          background: '#fafafa',
+          animation: 'fadeIn 0.3s ease'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', alignItems: 'center' }}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+              <FiEdit3 /> {t.editorNoticias}
+            </h3>
           </div>
           {noticias.map((nota) => (
-            <div key={nota.id} style={{ border: '1px solid #eee', padding: '1rem', marginBottom: '1rem', background: 'white', borderRadius: '8px' }}>
-              <input value={nota.titulo} onChange={(e) => actualizarNoticia(nota.id, 'titulo', e.target.value)} placeholder="Título" style={{ marginBottom: '0.5rem' }} />
-              <textarea value={nota.contenido} onChange={(e) => actualizarNoticia(nota.id, 'contenido', e.target.value)} placeholder="Contenido" rows="2" style={{ marginBottom: '0.5rem' }} />
-              <input value={nota.imagen} onChange={(e) => actualizarNoticia(nota.id, 'imagen', e.target.value)} placeholder="URL de imagen" style={{ marginBottom: '0.5rem' }} />
-              <input value={nota.video} onChange={(e) => actualizarNoticia(nota.id, 'video', e.target.value)} placeholder="URL de video (YouTube)" style={{ marginBottom: '0.5rem' }} />
-              <button onClick={() => eliminarNoticia(nota.id)} style={{ background: '#ff4444', color: 'white', border: 'none', padding: '0.3rem 1rem', borderRadius: '4px', cursor: 'pointer' }}>Eliminar</button>
+            <div key={nota.id} style={{ 
+              border: '1px solid #eee', 
+              padding: '1rem', 
+              marginBottom: '1rem', 
+              background: 'white', 
+              borderRadius: '12px',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
+            }}>
+              <input 
+                value={nota.titulo} 
+                onChange={(e) => actualizarNoticia(nota.id, 'titulo', e.target.value)} 
+                placeholder={t.titulo} 
+                style={{ 
+                  marginBottom: '0.5rem',
+                  width: '100%',
+                  padding: '0.6rem',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '0.9rem',
+                  outline: 'none'
+                }} 
+              />
+              <textarea 
+                value={nota.contenido} 
+                onChange={(e) => actualizarNoticia(nota.id, 'contenido', e.target.value)} 
+                placeholder={t.contenido} 
+                rows="2" 
+                style={{ 
+                  marginBottom: '0.5rem',
+                  width: '100%',
+                  padding: '0.6rem',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '0.9rem',
+                  outline: 'none',
+                  resize: 'vertical'
+                }} 
+              />
+              <input 
+                value={nota.imagen} 
+                onChange={(e) => actualizarNoticia(nota.id, 'imagen', e.target.value)} 
+                placeholder={t.imagen} 
+                style={{ 
+                  marginBottom: '0.5rem',
+                  width: '100%',
+                  padding: '0.6rem',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '0.9rem',
+                  outline: 'none'
+                }} 
+              />
+              <input 
+                value={nota.video} 
+                onChange={(e) => actualizarNoticia(nota.id, 'video', e.target.value)} 
+                placeholder={t.video} 
+                style={{ 
+                  marginBottom: '0.5rem',
+                  width: '100%',
+                  padding: '0.6rem',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '0.9rem',
+                  outline: 'none'
+                }} 
+              />
+              <button 
+                onClick={() => eliminarNoticia(nota.id)} 
+                style={{ 
+                  background: '#ff4444', 
+                  color: 'white', 
+                  border: 'none', 
+                  padding: '0.5rem 1rem', 
+                  borderRadius: '8px', 
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  fontSize: '0.85rem',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#cc0000'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#ff4444'}
+              >
+                <FiTrash2 size={14} /> {t.eliminar}
+              </button>
             </div>
           ))}
-          <button onClick={agregarNoticia} style={{ background: '#1a1a1a', color: 'white', padding: '0.8rem', border: 'none', borderRadius: '8px', width: '100%', cursor: 'pointer' }}>+ Agregar noticia</button>
+          <button 
+            onClick={agregarNoticia} 
+            style={{ 
+              background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)', 
+              color: 'white', 
+              padding: '0.8rem', 
+              border: 'none', 
+              borderRadius: '12px', 
+              width: '100%', 
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              fontSize: '0.95rem',
+              fontWeight: '600',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+          >
+            <FiPlus /> {t.agregarNoticia}
+          </button>
         </div>
       )}
 
+      {/* Noticias vacías */}
       {noticias.length === 0 && !modoAdmin && (
-        <div style={{ textAlign: 'center', padding: '3rem', color: '#999' }}>
-          <p>📭 No hay noticias</p>
-          <p style={{ fontSize: '0.9rem' }}>Haz clic en "Noticias" para acceder al panel de administración</p>
+        <div style={{ 
+          textAlign: 'center', 
+          padding: '3rem', 
+          color: '#999',
+          background: '#fafafa',
+          borderRadius: '16px'
+        }}>
+          <p style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>📭 {t.noHayNoticias}</p>
+          <p style={{ fontSize: '0.9rem' }}>{t.hazClic}</p>
         </div>
       )}
 
+      {/* Lista de noticias */}
       {noticias.map(nota => (
-        <div key={nota.id} style={{ borderBottom: '1px solid #eee', padding: '1.5rem 0' }}>
-          {nota.imagen && <img src={nota.imagen} alt={nota.titulo} style={{ width: '100%', maxHeight: '300px', objectFit: 'cover', borderRadius: '8px', marginBottom: '1rem' }} />}
-          {nota.video && <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, marginBottom: '1rem' }}><iframe src={nota.video} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen title={nota.titulo} /></div>}
-          <h3 style={{ fontSize: '1.5rem', fontWeight: '400' }}>{nota.titulo}</h3>
+        <div key={nota.id} style={{ 
+          borderBottom: '1px solid #eee', 
+          padding: '1.5rem 0',
+          transition: 'all 0.3s ease'
+        }}>
+          {nota.imagen && (
+            <img 
+              src={nota.imagen} 
+              alt={nota.titulo} 
+              style={{ 
+                width: '100%', 
+                maxHeight: '350px', 
+                objectFit: 'cover', 
+                borderRadius: '16px', 
+                marginBottom: '1rem',
+                boxShadow: '0 5px 20px rgba(0,0,0,0.1)'
+              }} 
+            />
+          )}
+          {nota.video && (
+            <div style={{ 
+              position: 'relative', 
+              paddingBottom: '56.25%', 
+              height: 0, 
+              marginBottom: '1rem',
+              borderRadius: '16px',
+              overflow: 'hidden',
+              boxShadow: '0 5px 20px rgba(0,0,0,0.1)'
+            }}>
+              <iframe 
+                src={nota.video} 
+                style={{ 
+                  position: 'absolute', 
+                  top: 0, 
+                  left: 0, 
+                  width: '100%', 
+                  height: '100%', 
+                  border: 'none' 
+                }} 
+                allowFullScreen 
+                title={nota.titulo} 
+              />
+            </div>
+          )}
+          <h3 style={{ 
+            fontSize: '1.5rem', 
+            fontWeight: '400',
+            fontFamily: "'Playfair Display', serif",
+            marginBottom: '0.5rem'
+          }}>
+            {nota.titulo}
+          </h3>
           <p style={{ color: '#555', lineHeight: '1.8' }}>{nota.contenido}</p>
         </div>
       ))}
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }
