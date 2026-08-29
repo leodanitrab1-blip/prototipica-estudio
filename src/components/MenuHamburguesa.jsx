@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { FaBars, FaTimes, FaHome, FaFileInvoice, FaTools, FaEnvelope, FaChevronRight, FaGlobe } from 'react-icons/fa';
+import { FaBars, FaTimes, FaHome, FaFileInvoice, FaTools, FaEnvelope, FaChevronRight } from 'react-icons/fa';
 
-export default function MenuHamburguesa({ setPaginaActual, paginaActual, idioma, textos }) {
+export default function MenuHamburguesa({ setPaginaActual, paginaActual, idioma, setIdioma, textos }) {
   const [abierto, setAbierto] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [hoveredItem, setHoveredItem] = useState(null);
@@ -31,10 +31,10 @@ export default function MenuHamburguesa({ setPaginaActual, paginaActual, idioma,
   };
 
   const menuItems = [
-    { id: 'inicio', icono: <FaHome />, label: textos?.inicio || 'Inicio', descripcion: 'Página principal' },
-    { id: 'cotizar', icono: <FaFileInvoice />, label: textos?.cotizar || 'Cotizar servicios', descripcion: 'Solicita una cotización' },
-    { id: 'tienda', icono: <FaTools />, label: textos?.tienda || 'MarketSoft', descripcion: 'Explora nuestro software' },
-    { id: 'contacto', icono: <FaEnvelope />, label: textos?.contacto || 'Contacto', descripcion: 'Hablemos de tu proyecto' }
+    { id: 'inicio', icono: <FaHome />, label: textos?.inicio || 'Inicio', descripcion: idioma === 'en' ? 'Home page' : 'Página principal' },
+    { id: 'cotizar', icono: <FaFileInvoice />, label: textos?.cotizar || 'Cotizar servicios', descripcion: idioma === 'en' ? 'Request a quote' : 'Solicita una cotización' },
+    { id: 'tienda', icono: <FaTools />, label: textos?.tienda || 'MarketSoft', descripcion: idioma === 'en' ? 'Explore our software' : 'Explora nuestro software' },
+    { id: 'contacto', icono: <FaEnvelope />, label: textos?.contacto || 'Contacto', descripcion: idioma === 'en' ? 'Talk about your project' : 'Hablemos de tu proyecto' }
   ];
 
   return (
@@ -45,10 +45,10 @@ export default function MenuHamburguesa({ setPaginaActual, paginaActual, idioma,
         left: 0,
         right: 0,
         zIndex: 1000,
-        background: scrolled ? 'rgba(255,255,255,0.98)' : 'rgba(255,255,255,0.9)',
+        background: scrolled ? 'rgba(255,255,255,0.98)' : 'rgba(255,255,255,0.95)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        padding: scrolled ? '0.6rem 1.5rem' : '0.8rem 1.5rem',
+        padding: scrolled ? '0.6rem 1rem' : '0.8rem 1rem',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -61,51 +61,35 @@ export default function MenuHamburguesa({ setPaginaActual, paginaActual, idioma,
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '0.8rem',
+            gap: '0.6rem',
             background: 'none',
             border: 'none',
             cursor: 'pointer',
             padding: 0
           }}
         >
-          <div style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '12px',
-            overflow: 'hidden',
-            background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
-            transition: 'all 0.3s ease'
-          }}>
-            <img 
-              src="/logo.png" 
-              alt="Prototipica" 
-              style={{ 
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover'
-              }} 
-            />
-          </div>
+          <img 
+            src="/logo.png" 
+            alt="Prototipica Estudio" 
+            style={{ 
+              height: '40px',
+              width: 'auto',
+              display: 'block'
+            }}
+          />
           <div style={{ textAlign: 'left' }}>
             <span style={{
               fontWeight: '700',
-              fontSize: '1.2rem',
+              fontSize: '1.1rem',
               letterSpacing: '-0.5px',
-              background: 'linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
               display: 'block',
-              fontFamily: "'Playfair Display', serif"
+              fontFamily: "'Playfair Display', serif",
+              color: '#1a1a1a'
             }}>
               Prototipica
             </span>
             <span style={{
-              fontSize: '0.65rem',
+              fontSize: '0.6rem',
               letterSpacing: '3px',
               textTransform: 'uppercase',
               color: '#999',
@@ -117,42 +101,74 @@ export default function MenuHamburguesa({ setPaginaActual, paginaActual, idioma,
           </div>
         </button>
 
-        <button 
-          onClick={() => setAbierto(!abierto)} 
-          style={{
-            width: '44px',
-            height: '44px',
-            borderRadius: '12px',
-            background: abierto ? '#1a1a1a' : 'transparent',
-            border: abierto ? 'none' : '1px solid rgba(0,0,0,0.1)',
-            color: abierto ? 'white' : '#1a1a1a',
-            fontSize: '1.3rem',
-            cursor: 'pointer',
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          <div style={{
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            boxShadow: abierto ? '0 4px 20px rgba(0,0,0,0.3)' : 'none'
-          }}
-          onMouseEnter={(e) => {
-            if (!abierto) {
-              e.currentTarget.style.background = '#1a1a1a';
-              e.currentTarget.style.color = 'white';
-              e.currentTarget.style.borderColor = '#1a1a1a';
-              e.currentTarget.style.transform = 'scale(1.05)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!abierto) {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = '#1a1a1a';
-              e.currentTarget.style.borderColor = 'rgba(0,0,0,0.1)';
-              e.currentTarget.style.transform = 'scale(1)';
-            }
-          }}
-        >
-          {abierto ? <FaTimes /> : <FaBars />}
-        </button>
+            gap: '4px',
+            background: '#f5f5f5',
+            borderRadius: '20px',
+            padding: '3px'
+          }}>
+            <button
+              onClick={() => setIdioma && setIdioma('es')}
+              style={{
+                padding: '5px 10px',
+                border: 'none',
+                background: idioma === 'es' ? '#1a1a1a' : 'transparent',
+                color: idioma === 'es' ? 'white' : '#666',
+                borderRadius: '16px',
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+                fontWeight: '600',
+                transition: 'all 0.3s ease',
+                fontFamily: "'Inter', sans-serif"
+              }}
+            >
+              ES
+            </button>
+            <button
+              onClick={() => setIdioma && setIdioma('en')}
+              style={{
+                padding: '5px 10px',
+                border: 'none',
+                background: idioma === 'en' ? '#1a1a1a' : 'transparent',
+                color: idioma === 'en' ? 'white' : '#666',
+                borderRadius: '16px',
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+                fontWeight: '600',
+                transition: 'all 0.3s ease',
+                fontFamily: "'Inter', sans-serif"
+              }}
+            >
+              EN
+            </button>
+          </div>
+
+          <button 
+            onClick={() => setAbierto(!abierto)} 
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '12px',
+              background: abierto ? '#1a1a1a' : 'transparent',
+              border: abierto ? 'none' : '1px solid rgba(0,0,0,0.1)',
+              color: abierto ? 'white' : '#1a1a1a',
+              fontSize: '1.2rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            {abierto ? <FaTimes /> : <FaBars />}
+          </button>
+        </div>
       </header>
 
       {abierto && (
@@ -163,9 +179,7 @@ export default function MenuHamburguesa({ setPaginaActual, paginaActual, idioma,
           width: '100vw',
           height: '100vh',
           background: 'rgba(0,0,0,0.3)',
-          backdropFilter: 'blur(5px)',
           zIndex: 1999,
-          animation: 'fadeIn 0.3s ease',
           onClick: () => setAbierto(false)
         }} />
       )}
@@ -199,14 +213,14 @@ export default function MenuHamburguesa({ setPaginaActual, paginaActual, idioma,
               margin: 0,
               fontWeight: '700'
             }}>
-              Menú
+              {idioma === 'en' ? 'Menu' : 'Menú'}
             </h2>
             <p style={{
               fontSize: '0.85rem',
               color: '#999',
               margin: '0.25rem 0 0 0'
             }}>
-              Navega por nuestro sitio
+              {idioma === 'en' ? 'Navigate our site' : 'Navega por nuestro sitio'}
             </p>
           </div>
           <button 
@@ -224,16 +238,6 @@ export default function MenuHamburguesa({ setPaginaActual, paginaActual, idioma,
               fontSize: '1.2rem',
               color: '#333',
               transition: 'all 0.3s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#1a1a1a';
-              e.currentTarget.style.color = 'white';
-              e.currentTarget.style.transform = 'rotate(90deg)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#f5f5f5';
-              e.currentTarget.style.color = '#333';
-              e.currentTarget.style.transform = 'rotate(0deg)';
             }}
           >
             <FaTimes />
@@ -257,10 +261,10 @@ export default function MenuHamburguesa({ setPaginaActual, paginaActual, idioma,
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '1.2rem',
+                gap: '1rem',
                 width: '100%',
-                padding: '1.2rem 1.5rem',
-                fontSize: '1.1rem',
+                padding: '1rem 1.2rem',
+                fontSize: '1rem',
                 fontWeight: paginaActual === item.id ? '600' : '400',
                 color: paginaActual === item.id ? '#1a1a1a' : '#555',
                 background: paginaActual === item.id 
@@ -270,114 +274,48 @@ export default function MenuHamburguesa({ setPaginaActual, paginaActual, idioma,
                 borderRadius: '16px',
                 cursor: 'pointer',
                 textAlign: 'left',
-                position: 'relative',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                transform: hoveredItem === item.id ? 'translateX(10px)' : 'translateX(0)',
-                boxShadow: paginaActual === item.id ? '0 4px 20px rgba(0,0,0,0.08)' : 'none',
-                animation: `slideIn 0.5s ease ${index * 0.1}s both`
+                transition: 'all 0.3s ease',
+                transform: hoveredItem === item.id ? 'translateX(5px)' : 'translateX(0)'
               }}
             >
               <div style={{
-                width: '50px',
-                height: '50px',
-                borderRadius: '14px',
+                width: '45px',
+                height: '45px',
+                borderRadius: '12px',
                 background: paginaActual === item.id 
                   ? 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)' 
-                  : 'linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%)',
+                  : '#f5f5f5',
                 color: paginaActual === item.id ? '#c9a96e' : '#666',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '1.2rem',
-                transition: 'all 0.3s ease',
-                boxShadow: paginaActual === item.id ? '0 4px 15px rgba(0,0,0,0.2)' : 'none'
+                fontSize: '1.1rem'
               }}>
                 {item.icono}
               </div>
-
               <div style={{ flex: 1 }}>
-                <div style={{
-                  fontSize: '1.1rem',
-                  fontWeight: '600',
-                  marginBottom: '0.2rem'
-                }}>
+                <div style={{ fontWeight: '600', marginBottom: '0.2rem' }}>
                   {item.label}
                 </div>
-                <div style={{
-                  fontSize: '0.85rem',
-                  color: '#999'
-                }}>
+                <div style={{ fontSize: '0.8rem', color: '#999' }}>
                   {item.descripcion}
                 </div>
               </div>
-
-              <FaChevronRight style={{
-                fontSize: '0.9rem',
-                color: '#ccc',
-                transition: 'all 0.3s ease',
-                transform: hoveredItem === item.id ? 'translateX(5px)' : 'translateX(0)',
-                opacity: hoveredItem === item.id ? 1 : 0.5
-              }} />
+              <FaChevronRight style={{ fontSize: '0.8rem', color: '#ccc' }} />
             </button>
           ))}
         </nav>
 
         <div style={{
-          padding: '1.5rem',
+          padding: '1rem 1.5rem',
           borderTop: '1px solid rgba(0,0,0,0.06)',
-          background: 'linear-gradient(180deg, #fafafa 0%, #f5f5f5 100%)'
+          textAlign: 'center'
         }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '1rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <FaGlobe style={{ color: '#c9a96e', fontSize: '1rem' }} />
-              <span style={{ fontSize: '0.85rem', color: '#666', fontWeight: '500' }}>
-                {idioma === 'en' ? 'Language' : 'Idioma'}
-              </span>
-            </div>
-            <span style={{
-              padding: '0.3rem 0.8rem',
-              background: '#1a1a1a',
-              color: 'white',
-              borderRadius: '20px',
-              fontSize: '0.75rem',
-              fontWeight: '600'
-            }}>
-              {idioma === 'en' ? 'EN' : 'ES'}
-            </span>
-          </div>
-          <p style={{
-            textAlign: 'center',
-            color: '#999',
-            fontSize: '0.8rem',
-            margin: 0
-          }}>
+          <p style={{ color: '#999', fontSize: '0.8rem', margin: 0 }}>
             © {new Date().getFullYear()} Prototipica Estudio
           </p>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        
-        @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateX(-30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-      `}</style>
     </>
   );
 }

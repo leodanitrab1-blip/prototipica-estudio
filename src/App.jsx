@@ -70,65 +70,17 @@ function App() {
       background: 'linear-gradient(180deg, #ffffff 0%, #fafafa 100%)',
       position: 'relative'
     }}>
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        right: 0,
-        zIndex: 1000,
-        display: 'flex',
-        gap: '8px',
-        padding: '8px 16px',
-        background: 'rgba(255,255,255,0.95)',
-        backdropFilter: 'blur(10px)',
-        borderRadius: '0 0 0 20px',
-        boxShadow: '0 2px 20px rgba(0,0,0,0.1)'
-      }}>
-        <button
-          onClick={() => setIdioma('es')}
-          style={{
-            padding: '6px 12px',
-            border: idioma === 'es' ? '2px solid #1a1a1a' : '2px solid transparent',
-            background: idioma === 'es' ? '#1a1a1a' : 'transparent',
-            color: idioma === 'es' ? 'white' : '#666',
-            borderRadius: '20px',
-            cursor: 'pointer',
-            fontSize: '0.85rem',
-            fontWeight: '600',
-            transition: 'all 0.3s ease',
-            fontFamily: "'Inter', sans-serif"
-          }}
-        >
-          🇲🇽 ES
-        </button>
-        <button
-          onClick={() => setIdioma('en')}
-          style={{
-            padding: '6px 12px',
-            border: idioma === 'en' ? '2px solid #1a1a1a' : '2px solid transparent',
-            background: idioma === 'en' ? '#1a1a1a' : 'transparent',
-            color: idioma === 'en' ? 'white' : '#666',
-            borderRadius: '20px',
-            cursor: 'pointer',
-            fontSize: '0.85rem',
-            fontWeight: '600',
-            transition: 'all 0.3s ease',
-            fontFamily: "'Inter', sans-serif"
-          }}
-        >
-          🇺🇸 EN
-        </button>
-      </div>
-
       <MenuHamburguesa 
         setPaginaActual={cambiarPagina} 
         paginaActual={paginaActual}
         idioma={idioma}
+        setIdioma={setIdioma}
         textos={t}
       />
 
       <div 
         style={{ 
-          paddingTop: '80px',
+          paddingTop: '70px',
           opacity: isTransitioning ? 0 : 1,
           transform: isTransitioning ? 'translateY(20px)' : 'translateY(0)',
           transition: 'all 0.3s ease-in-out'
@@ -159,14 +111,6 @@ function App() {
             boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
             transition: 'all 0.3s ease',
             zIndex: 999
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-5px)';
-            e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.4)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.3)';
           }}
         >
           <FiArrowUp size={20} />
@@ -239,14 +183,6 @@ function App() {
                       fontSize: '0.9rem',
                       transition: 'all 0.3s ease',
                       fontFamily: "'Inter', sans-serif"
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.color = '#c9a96e';
-                      e.target.style.transform = 'translateX(5px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.color = '#999';
-                      e.target.style.transform = 'translateX(0)';
                     }}
                   >
                     {t[pagina]}
