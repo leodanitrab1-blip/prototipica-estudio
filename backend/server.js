@@ -3,7 +3,6 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import Stripe from 'stripe';
-import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,73 +10,99 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ============================================
-// 1. CORS
-// ============================================
+// CORS
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'apikey']
 }));
 app.options('*', cors());
 
-// ============================================
-// 2. MIDDLEWARE JSON
-// ============================================
+// JSON
 app.use(express.json({ limit: '10mb' }));
 
-// ============================================
-// 3. BASE DE DATOS LOCAL
-// ============================================
-const DB_PATH = path.join(__dirname, '../data/productos.json');
-const DATA_DIR = path.join(__dirname, '../data');
+// Supabase config
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://mcqpnkjnktzmaxkqwafc.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_KEY || 'sb_publishable_ECwaAPhBKcLaNJGiS08h0A_n29A0h8M';
 
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-
-const leerProductos = () => {
-  try {
-    if (fs.existsSync(DB_PATH)) {
-      const data = fs.readFileSync(DB_PATH, 'utf8');
-      return JSON.parse(data);
+// Función para hacer peticiones a Supabase
+const supabaseFetch = async (endpoint, options = {}) => {
+  const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      ...options.headers
     }
-  } catch (error) {
-    console.error('Error al leer productos:', error.message);
+  });
+  
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Supabase error: ${response.status} - ${error}`);
   }
-  return [];
+  
+  return response.json();
 };
 
-const guardarProductos = (productos) => {
-  try {
-    fs.writeFileSync(DB_PATH, JSON.stringify(productos, null, 2));
-    return true;
-  } catch (error) {
-    console.error('Error al guardar productos:', error.message);
-    return false;
-  }
+// Obtener productos
+const getProductos = async () => {
+  const data = await supabaseFetch('productos?select=*&order=fecha.desc');
+  return data.map(p => ({
+    id: p.id,
+    nombre: p.nombre,
+    precio: Number(p.precio),
+    descripcion: p.descripcion || '',
+    imagen: p.imagen || '',
+    video: p.video || '',
+    enlaceDescarga: p.enlace_descarga || '',
+    fecha: p.fecha
+  }));
 };
 
-let productosDB = leerProductos();
-if (productosDB.length === 0) {
-  productosDB = [
-    {
-      id: 1,
-      nombre: 'Sistema POS Pro',
-      precio: 2999,
-      descripcion: 'Sistema de punto de venta',
-      imagen: 'https://placehold.co/600x400/1a1a1a/ffffff?text=POS+Pro',
-      video: '',
-      enlaceDescarga: 'https://ejemplo.com/descargas/pos-pro.zip',
-      fecha: new Date().toISOString()
-    }
-  ];
-  guardarProductos(productosDB);
-}
+// Crear producto
+const createProducto = async (producto) => {
+  const data = await supabaseFetch('productos', {
+    method: 'POST',
+    body: JSON.stringify({
+      id: producto.id,
+      nombre: producto.nombre,
+      precio: producto.precio,
+      descripcion: producto.descripcion,
+      imagen: producto.imagen,
+      video: producto.video,
+      enlace_descarga: producto.enlaceDescarga
+    })
+  });
+  return data;
+};
 
-// ============================================
-// 4. FUNCIÓN PARA ENVIAR CORREO CON RESEND
-// ============================================
+// Actualizar producto
+const updateProducto = async (id, producto) => {
+  const data = await supabaseFetch(`productos?id=eq.${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      nombre: producto.nombre,
+      precio: producto.precio,
+      descripcion: producto.descripcion,
+      imagen: producto.imagen,
+      video: producto.video,
+      enlace_descarga: producto.enlaceDescarga
+    })
+  });
+  return data;
+};
+
+// Eliminar producto
+const deleteProducto = async (id) => {
+  const data = await supabaseFetch(`productos?id=eq.${id}`, {
+    method: 'DELETE'
+  });
+  return data;
+};
+
+// Función para enviar correo con Resend
 const enviarCorreoResend = async (destinatario, asunto, html, replyTo = null) => {
   const RESEND_API_KEY = process.env.RESEND_API_KEY;
   
@@ -114,7 +139,7 @@ const enviarCorreoResend = async (destinatario, asunto, html, replyTo = null) =>
 };
 
 // ============================================
-// 5. RUTAS API
+// RUTAS API
 // ============================================
 
 // Test
@@ -122,19 +147,33 @@ app.get('/api/test', (req, res) => {
   res.json({ 
     status: 'ok', 
     message: 'Backend funcionando',
+    supabase: '✅',
     resend: process.env.RESEND_API_KEY ? '✅' : '❌'
   });
 });
 
-// Productos
-app.get('/api/productos', (req, res) => {
-  res.json(productosDB);
+// Obtener productos
+app.get('/api/productos', async (req, res) => {
+  console.log('📋 GET /api/productos');
+  try {
+    const productos = await getProductos();
+    console.log(`✅ ${productos.length} productos obtenidos`);
+    res.json(productos);
+  } catch (error) {
+    console.error('❌ Error al obtener productos:', error.message);
+    res.status(500).json({ error: 'Error al obtener productos' });
+  }
 });
 
-app.post('/api/productos', (req, res) => {
+// Agregar producto
+app.post('/api/productos', async (req, res) => {
+  console.log('➕ POST /api/productos');
   try {
     const { nombre, precio, descripcion, imagen, video, enlaceDescarga } = req.body;
-    if (!nombre || !precio) return res.status(400).json({ error: 'Nombre y precio son obligatorios' });
+    if (!nombre || !precio) {
+      return res.status(400).json({ error: 'Nombre y precio son obligatorios' });
+    }
+    
     const nuevo = {
       id: Date.now(),
       nombre: nombre.trim(),
@@ -142,47 +181,57 @@ app.post('/api/productos', (req, res) => {
       descripcion: descripcion || '',
       imagen: imagen || '',
       video: video || '',
-      enlaceDescarga: enlaceDescarga || '',
-      fecha: new Date().toISOString()
+      enlaceDescarga: enlaceDescarga || ''
     };
-    productosDB.push(nuevo);
-    guardarProductos(productosDB);
+    
+    await createProducto(nuevo);
+    console.log('✅ Producto agregado:', nuevo.nombre);
     res.status(201).json(nuevo);
   } catch (error) {
+    console.error('❌ Error al agregar:', error.message);
     res.status(500).json({ error: 'Error al agregar producto' });
   }
 });
 
-app.delete('/api/productos/:id', (req, res) => {
-  const id = Number(req.params.id);
-  productosDB = productosDB.filter(p => p.id !== id);
-  guardarProductos(productosDB);
-  res.json({ success: true });
+// Actualizar producto
+app.put('/api/productos/:id', async (req, res) => {
+  console.log('✏️ PUT /api/productos/', req.params.id);
+  try {
+    const id = Number(req.params.id);
+    const { nombre, precio, descripcion, imagen, video, enlaceDescarga } = req.body;
+    
+    await updateProducto(id, {
+      nombre: nombre || '',
+      precio: precio !== undefined ? Number(precio) : 0,
+      descripcion: descripcion || '',
+      imagen: imagen || '',
+      video: video || '',
+      enlaceDescarga: enlaceDescarga || ''
+    });
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ Error al actualizar:', error.message);
+    res.status(500).json({ error: 'Error al actualizar' });
+  }
 });
 
-app.put('/api/productos/:id', (req, res) => {
-  const id = Number(req.params.id);
-  const index = productosDB.findIndex(p => p.id === id);
-  if (index === -1) return res.status(404).json({ error: 'Producto no encontrado' });
-  const { nombre, precio, descripcion, imagen, video, enlaceDescarga } = req.body;
-  productosDB[index] = {
-    ...productosDB[index],
-    nombre: nombre || productosDB[index].nombre,
-    precio: precio !== undefined ? Number(precio) : productosDB[index].precio,
-    descripcion: descripcion !== undefined ? descripcion : productosDB[index].descripcion,
-    imagen: imagen !== undefined ? imagen : productosDB[index].imagen,
-    video: video !== undefined ? video : productosDB[index].video,
-    enlaceDescarga: enlaceDescarga !== undefined ? enlaceDescarga : productosDB[index].enlaceDescarga
-  };
-  guardarProductos(productosDB);
-  res.json(productosDB[index]);
+// Eliminar producto
+app.delete('/api/productos/:id', async (req, res) => {
+  console.log('🗑️ DELETE /api/productos/', req.params.id);
+  try {
+    const id = Number(req.params.id);
+    await deleteProducto(id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ Error al eliminar:', error.message);
+    res.status(500).json({ error: 'Error al eliminar' });
+  }
 });
 
-// ENVIAR CORREO
+// Enviar correo
 app.post('/api/enviar-correo', async (req, res) => {
   console.log('📧 POST /api/enviar-correo');
-  console.log('Datos recibidos:', req.body);
-  
   try {
     const datos = req.body;
     if (!datos || !datos.email) {
@@ -202,26 +251,21 @@ app.post('/api/enviar-correo', async (req, res) => {
       <p>${datos.descripcion || datos.mensaje || 'No especificado'}</p>
     `;
 
-    // Enviar a tu correo
-    const resultado = await enviarCorreoResend(
+    await enviarCorreoResend(
       'pdabasel1@gmail.com',
       `${asunto} - Prototipica Estudio`,
       html,
       datos.email
     );
 
-    console.log('✅ Correo enviado con éxito:', resultado);
     res.json({ success: true, message: 'Correo enviado correctamente' });
   } catch (error) {
-    console.error('❌ Error al enviar correo:', error);
-    res.status(500).json({ 
-      error: 'Error al enviar correo',
-      details: error.message 
-    });
+    console.error('❌ Error al enviar correo:', error.message);
+    res.status(500).json({ error: 'Error al enviar correo', details: error.message });
   }
 });
 
-// STRIPE
+// Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 app.post('/api/crear-sesion-pago', async (req, res) => {
@@ -261,7 +305,7 @@ app.post('/api/crear-sesion-pago', async (req, res) => {
   }
 });
 
-// WEBHOOK STRIPE
+// Webhook Stripe
 app.post('/api/webhook-stripe', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -298,19 +342,16 @@ app.post('/api/webhook-stripe', express.raw({ type: 'application/json' }), async
   }
 });
 
-// ============================================
-// 6. FRONTEND
-// ============================================
+// Servir frontend
 app.use(express.static(path.join(__dirname, '../dist')));
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
-// ============================================
-// 7. INICIAR
-// ============================================
+// Iniciar
 app.listen(PORT, () => {
   console.log(`🚀 Servidor en puerto ${PORT}`);
-  console.log(`📧 Resend API: ${process.env.RESEND_API_KEY ? '✅' : '❌'}`);
+  console.log(`📦 Supabase: ${SUPABASE_URL}`);
+  console.log(`📧 Resend: ${process.env.RESEND_API_KEY ? '✅' : '❌'}`);
 });
