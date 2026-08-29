@@ -137,6 +137,8 @@ export default function TiendaSoftware({ idioma }) {
       enlaceDescarga: ''
     });
     setMostrarFormulario(true);
+    // Bloquear scroll del body
+    document.body.style.overflow = 'hidden';
   };
 
   const cerrarFormulario = () => {
@@ -149,6 +151,8 @@ export default function TiendaSoftware({ idioma }) {
       video: '',
       enlaceDescarga: ''
     });
+    // Restaurar scroll del body
+    document.body.style.overflow = 'unset';
   };
 
   const guardarProducto = async () => {
@@ -324,7 +328,11 @@ export default function TiendaSoftware({ idioma }) {
       {/* Modal de Login */}
       {mostrarLogin && !modoAdmin && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0,
           background: 'rgba(0,0,0,0.6)',
           backdropFilter: 'blur(8px)',
           zIndex: 9999,
@@ -428,7 +436,11 @@ export default function TiendaSoftware({ idioma }) {
       {/* Modal para pedir email */}
       {mostrarModalEmail && productoSeleccionado && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0,
           background: 'rgba(0,0,0,0.6)',
           backdropFilter: 'blur(8px)',
           zIndex: 10000,
@@ -447,20 +459,6 @@ export default function TiendaSoftware({ idioma }) {
             animation: 'fadeInUp 0.3s ease',
             boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
           }}>
-            <div style={{
-              width: '60px',
-              height: '60px',
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #635bff 0%, #4a42e8 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 1rem',
-              color: 'white',
-              fontSize: '1.5rem'
-            }}>
-              <FiShoppingCart />
-            </div>
             <h3 style={{ marginBottom: '0.5rem', fontFamily: "'Playfair Display', serif" }}>
               {t.confirmarCompra}
             </h3>
@@ -537,17 +535,22 @@ export default function TiendaSoftware({ idioma }) {
         </div>
       )}
 
-      {/* Modal para agregar producto */}
+      {/* Modal para agregar producto - CORREGIDO */}
       {mostrarFormulario && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0,
           background: 'rgba(0,0,0,0.6)',
           backdropFilter: 'blur(8px)',
           zIndex: 9998,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '1rem'
+          padding: '1rem',
+          overflowY: 'auto'
         }}>
           <div style={{
             background: 'white',
@@ -557,13 +560,19 @@ export default function TiendaSoftware({ idioma }) {
             padding: '2rem',
             maxHeight: '90vh',
             overflowY: 'auto',
-            animation: 'fadeInUp 0.3s ease'
+            animation: 'fadeInUp 0.3s ease',
+            margin: 'auto'
           }}>
             <div style={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
               alignItems: 'center', 
-              marginBottom: '1.5rem' 
+              marginBottom: '1.5rem',
+              position: 'sticky',
+              top: '-2rem',
+              background: 'white',
+              paddingTop: '0.5rem',
+              zIndex: 1
             }}>
               <h3 style={{ 
                 fontSize: '1.3rem', 
@@ -571,7 +580,8 @@ export default function TiendaSoftware({ idioma }) {
                 fontFamily: "'Playfair Display', serif",
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem'
+                gap: '0.5rem',
+                margin: 0
               }}>
                 <FiPlus /> {t.agregarProducto}
               </h3>
@@ -590,14 +600,6 @@ export default function TiendaSoftware({ idioma }) {
                   height: '35px',
                   borderRadius: '50%',
                   transition: 'all 0.3s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#f5f5f5';
-                  e.currentTarget.style.color = '#333';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'none';
-                  e.currentTarget.style.color = '#999';
                 }}
               >
                 <FiX />
@@ -690,7 +692,15 @@ export default function TiendaSoftware({ idioma }) {
               </p>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.8rem' }}>
+            <div style={{ 
+              display: 'flex', 
+              gap: '0.8rem',
+              position: 'sticky',
+              bottom: '-2rem',
+              background: 'white',
+              paddingBottom: '0.5rem',
+              zIndex: 1
+            }}>
               <button 
                 onClick={guardarProducto} 
                 style={{ 
@@ -923,8 +933,6 @@ export default function TiendaSoftware({ idioma }) {
                   fontSize: '0.85rem',
                   transition: 'all 0.3s ease'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#cc0000'}
-                onMouseLeave={(e) => e.currentTarget.style.background = '#ff4444'}
               >
                 <FiTrash2 size={14} /> {t.eliminar}
               </button>
@@ -1040,16 +1048,6 @@ export default function TiendaSoftware({ idioma }) {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '0.3rem'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!cargandoPago) {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!cargandoPago) {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                    }
                   }}
                 >
                   <FiShoppingCart size={16} />
