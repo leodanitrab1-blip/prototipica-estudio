@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
 import { FiPlus, FiTrash2, FiX, FiLock, FiEdit3 } from 'react-icons/fi';
 
+const SUPABASE_URL = 'https://mcqpnkjnktzmaxkqwafc.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_ECwaAPhBKcLaNJGiS08h0A_n29A0h8M';
+
 export default function SeccionCentral({ cambiarPagina, idioma }) {
   const [noticias, setNoticias] = useState([]);
   const [modoAdmin, setModoAdmin] = useState(false);
   const [mostrarLogin, setMostrarLogin] = useState(false);
   const [password, setPassword] = useState('');
   const [errorPassword, setErrorPassword] = useState('');
+  const [cargando, setCargando] = useState(true);
   const ADMIN_PASSWORD = 'prototipica2026';
 
   const textos = {
@@ -31,9 +35,10 @@ export default function SeccionCentral({ cambiarPagina, idioma }) {
       eliminarConfirm: '¿Eliminar esta noticia?',
       errorPassword: 'Contraseña incorrecta',
       bienvenido: 'Bienvenido a Prototipica Estudio',
-      descripcion: 'Software y soluciones digitales para tu negocio',
+      descripcion: 'Software y soluciones digitales para tu negocio. Innovación y calidad en cada proyecto.',
       explorar: 'Explorar productos',
-      cotizar: 'Cotizar ahora'
+      cotizar: 'Cotizar ahora',
+      cargando: 'Cargando...'
     },
     en: {
       noticias: 'News',
@@ -56,43 +61,129 @@ export default function SeccionCentral({ cambiarPagina, idioma }) {
       eliminarConfirm: 'Delete this news?',
       errorPassword: 'Incorrect password',
       bienvenido: 'Welcome to Prototipica Estudio',
-      descripcion: 'Software and digital solutions for your business',
+      descripcion: 'Software and digital solutions for your business. Innovation and quality in every project.',
       explorar: 'Explore products',
-      cotizar: 'Get a quote'
+      cotizar: 'Get a quote',
+      cargando: 'Loading...'
     }
   };
 
   const t = textos[idioma] || textos.es;
 
-  useEffect(() => {
-    const datos = localStorage.getItem('noticiasPrototipica');
-    if (datos) {
-      try { setNoticias(JSON.parse(datos)); } catch { setNoticias([]); }
-    } else { setNoticias([]); }
-  }, []);
-
-  const guardarNoticias = (nuevas) => {
-    setNoticias(nuevas);
-    localStorage.setItem('noticiasPrototipica', JSON.stringify(nuevas));
-  };
-
-  const agregarNoticia = () => {
-    const nueva = { id: Date.now(), titulo: 'Nueva noticia', contenido: 'Escribe aquí el contenido...', imagen: '', video: '' };
-    guardarNoticias([...noticias, nueva]);
-  };
-
-  const eliminarNoticia = (id) => {
-    if (window.confirm(t.eliminarConfirm)) {
-      guardarNoticias(noticias.filter(n => n.id !== id));
+  // Cargar noticias desde Supabase
+  const cargarNoticias = async () => {
+    try {
+      setCargando(true);
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/noticias?select=*&order=fecha.desc`, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setNoticias(data.map(n => ({
+          id: Number(n.id),
+          titulo: n.titulo || '',
+          contenido: n.contenido || '',
+          imagen: n.imagen || '',
+          video: n.video || ''
+        })));
+      }
+    } catch (error) {
+      console.error('Error al cargar noticias:', error);
+    } finally {
+      setCargando(false);
     }
   };
 
-  const actualizarNoticia = (id, campo, valor) => {
+  useEffect(() => {
+    cargarNoticias();
+  }, []);
+
+  const guardarNoticias = async (nuevas) => {
+    setNoticias(nuevas);
+  };
+
+  const agregarNoticia = async () => {
+    const nueva = { 
+      id: Date.now(), 
+      titulo: 'Nueva noticia', 
+      contenido: 'Escribe aquí el contenido...', 
+      imagen: '', 
+      video: '' 
+    };
+    
+    try {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/noticias`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          id: nueva.id,
+          titulo: nueva.titulo,
+          contenido: nueva.contenido,
+          imagen: nueva.imagen,
+          video: nueva.video
+        })
+      });
+      
+      if (response.ok) {
+        setNoticias([...noticias, nueva]);
+      }
+    } catch (error) {
+      console.error('Error al agregar:', error);
+    }
+  };
+
+  const eliminarNoticia = async (id) => {
+    if (window.confirm(t.eliminarConfirm)) {
+      try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/noticias?id=eq.${id}`, {
+          method: 'DELETE',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`
+          }
+        });
+        
+        if (response.ok) {
+          setNoticias(noticias.filter(n => n.id !== id));
+        }
+      } catch (error) {
+        console.error('Error al eliminar:', error);
+      }
+    }
+  };
+
+  const actualizarNoticia = async (id, campo, valor) => {
     const copia = noticias.map(n => {
       if (n.id === id) return { ...n, [campo]: valor };
       return n;
     });
-    guardarNoticias(copia);
+    setNoticias(copia);
+    
+    // Actualizar en Supabase
+    try {
+      const body = {};
+      body[campo] = valor;
+      
+      await fetch(`${SUPABASE_URL}/rest/v1/noticias?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+    } catch (error) {
+      console.error('Error al actualizar:', error);
+    }
   };
 
   const handleTituloClick = () => {
@@ -135,7 +226,7 @@ export default function SeccionCentral({ cambiarPagina, idioma }) {
         }} />
         <h1 style={{
           fontFamily: "'Playfair Display', serif",
-          fontSize: 'clamp(2rem, 5vw, 3.5rem)',
+          fontSize: 'clamp(2rem, 5vw, 3rem)',
           fontWeight: '700',
           marginBottom: '1rem',
           background: 'linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 100%)',
@@ -147,7 +238,7 @@ export default function SeccionCentral({ cambiarPagina, idioma }) {
           {t.bienvenido}
         </h1>
         <p style={{
-          fontSize: 'clamp(1rem, 2vw, 1.2rem)',
+          fontSize: 'clamp(1rem, 2vw, 1.1rem)',
           color: '#666',
           marginBottom: '2rem',
           position: 'relative'
@@ -175,14 +266,6 @@ export default function SeccionCentral({ cambiarPagina, idioma }) {
               transition: 'all 0.3s ease',
               boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-3px)';
-              e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.3)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)';
-            }}
           >
             {t.explorar}
           </button>
@@ -198,14 +281,6 @@ export default function SeccionCentral({ cambiarPagina, idioma }) {
               fontSize: '1rem',
               fontWeight: '600',
               transition: 'all 0.3s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#1a1a1a';
-              e.currentTarget.style.color = 'white';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = '#1a1a1a';
             }}
           >
             {t.cotizar}
@@ -249,23 +324,6 @@ export default function SeccionCentral({ cambiarPagina, idioma }) {
             </span>
           )}
         </h2>
-        {modoAdmin && (
-          <button
-            onClick={() => setModoAdmin(false)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#999',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.3rem'
-            }}
-          >
-            <FiX size={16} /> {t.cerrar}
-          </button>
-        )}
       </div>
 
       {/* Login modal */}
@@ -291,8 +349,7 @@ export default function SeccionCentral({ cambiarPagina, idioma }) {
             width: '100%', 
             padding: '2rem', 
             textAlign: 'center',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-            animation: 'fadeInUp 0.3s ease'
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
           }}>
             <div style={{
               width: '60px',
@@ -326,11 +383,8 @@ export default function SeccionCentral({ cambiarPagina, idioma }) {
                 borderRadius: '12px', 
                 marginBottom: '0.8rem', 
                 fontSize: '1rem',
-                outline: 'none',
-                transition: 'border-color 0.3s ease'
+                outline: 'none'
               }}
-              onFocus={(e) => e.target.style.borderColor = '#1a1a1a'}
-              onBlur={(e) => e.target.style.borderColor = '#ddd'}
               onKeyPress={(e) => e.key === 'Enter' && handleLogin()} 
             />
             {errorPassword && <p style={{ color: '#c62828', fontSize: '0.9rem', marginBottom: '0.8rem' }}>{errorPassword}</p>}
@@ -346,11 +400,8 @@ export default function SeccionCentral({ cambiarPagina, idioma }) {
                   borderRadius: '40px', 
                   cursor: 'pointer', 
                   fontSize: '1rem',
-                  fontWeight: '600',
-                  transition: 'all 0.3s ease'
+                  fontWeight: '600'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
               >
                 {t.ingresar}
               </button>
@@ -364,8 +415,7 @@ export default function SeccionCentral({ cambiarPagina, idioma }) {
                   border: 'none', 
                   borderRadius: '40px', 
                   cursor: 'pointer', 
-                  fontSize: '1rem',
-                  transition: 'all 0.3s ease'
+                  fontSize: '1rem' 
                 }}
               >
                 {t.cancelar}
@@ -382,80 +432,52 @@ export default function SeccionCentral({ cambiarPagina, idioma }) {
           borderRadius: '16px', 
           padding: '1.5rem', 
           marginBottom: '2rem', 
-          background: '#fafafa',
-          animation: 'fadeIn 0.3s ease'
+          background: '#fafafa'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', alignItems: 'center' }}>
             <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
               <FiEdit3 /> {t.editorNoticias}
             </h3>
+            <button 
+              onClick={() => setModoAdmin(false)}
+              style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}
+            >
+              {t.cerrar}
+            </button>
           </div>
+          
           {noticias.map((nota) => (
             <div key={nota.id} style={{ 
               border: '1px solid #eee', 
               padding: '1rem', 
               marginBottom: '1rem', 
               background: 'white', 
-              borderRadius: '12px',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
+              borderRadius: '12px' 
             }}>
               <input 
                 value={nota.titulo} 
                 onChange={(e) => actualizarNoticia(nota.id, 'titulo', e.target.value)} 
                 placeholder={t.titulo} 
-                style={{ 
-                  marginBottom: '0.5rem',
-                  width: '100%',
-                  padding: '0.6rem',
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  fontSize: '0.9rem',
-                  outline: 'none'
-                }} 
+                style={{ marginBottom: '0.5rem', width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '8px' }}
               />
               <textarea 
                 value={nota.contenido} 
                 onChange={(e) => actualizarNoticia(nota.id, 'contenido', e.target.value)} 
                 placeholder={t.contenido} 
                 rows="2" 
-                style={{ 
-                  marginBottom: '0.5rem',
-                  width: '100%',
-                  padding: '0.6rem',
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  fontSize: '0.9rem',
-                  outline: 'none',
-                  resize: 'vertical'
-                }} 
+                style={{ marginBottom: '0.5rem', width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '8px' }}
               />
               <input 
                 value={nota.imagen} 
                 onChange={(e) => actualizarNoticia(nota.id, 'imagen', e.target.value)} 
                 placeholder={t.imagen} 
-                style={{ 
-                  marginBottom: '0.5rem',
-                  width: '100%',
-                  padding: '0.6rem',
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  fontSize: '0.9rem',
-                  outline: 'none'
-                }} 
+                style={{ marginBottom: '0.5rem', width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '8px' }}
               />
               <input 
                 value={nota.video} 
                 onChange={(e) => actualizarNoticia(nota.id, 'video', e.target.value)} 
                 placeholder={t.video} 
-                style={{ 
-                  marginBottom: '0.5rem',
-                  width: '100%',
-                  padding: '0.6rem',
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  fontSize: '0.9rem',
-                  outline: 'none'
-                }} 
+                style={{ marginBottom: '0.5rem', width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '8px' }}
               />
               <button 
                 onClick={() => eliminarNoticia(nota.id)} 
@@ -468,17 +490,14 @@ export default function SeccionCentral({ cambiarPagina, idioma }) {
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.3rem',
-                  fontSize: '0.85rem',
-                  transition: 'all 0.3s ease'
+                  gap: '0.3rem'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#cc0000'}
-                onMouseLeave={(e) => e.currentTarget.style.background = '#ff4444'}
               >
                 <FiTrash2 size={14} /> {t.eliminar}
               </button>
             </div>
           ))}
+          
           <button 
             onClick={agregarNoticia} 
             style={{ 
@@ -493,12 +512,8 @@ export default function SeccionCentral({ cambiarPagina, idioma }) {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '0.5rem',
-              fontSize: '0.95rem',
-              fontWeight: '600',
-              transition: 'all 0.3s ease'
+              fontWeight: '600'
             }}
-            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
           >
             <FiPlus /> {t.agregarNoticia}
           </button>
@@ -506,7 +521,7 @@ export default function SeccionCentral({ cambiarPagina, idioma }) {
       )}
 
       {/* Noticias vacías */}
-      {noticias.length === 0 && !modoAdmin && (
+      {noticias.length === 0 && !modoAdmin && !cargando && (
         <div style={{ 
           textAlign: 'center', 
           padding: '3rem', 
@@ -519,12 +534,18 @@ export default function SeccionCentral({ cambiarPagina, idioma }) {
         </div>
       )}
 
+      {/* Cargando */}
+      {cargando && (
+        <div style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>
+          {t.cargando}
+        </div>
+      )}
+
       {/* Lista de noticias */}
       {noticias.map(nota => (
         <div key={nota.id} style={{ 
           borderBottom: '1px solid #eee', 
-          padding: '1.5rem 0',
-          transition: 'all 0.3s ease'
+          padding: '1.5rem 0'
         }}>
           {nota.imagen && (
             <img 
@@ -547,19 +568,11 @@ export default function SeccionCentral({ cambiarPagina, idioma }) {
               height: 0, 
               marginBottom: '1rem',
               borderRadius: '16px',
-              overflow: 'hidden',
-              boxShadow: '0 5px 20px rgba(0,0,0,0.1)'
+              overflow: 'hidden'
             }}>
               <iframe 
                 src={nota.video} 
-                style={{ 
-                  position: 'absolute', 
-                  top: 0, 
-                  left: 0, 
-                  width: '100%', 
-                  height: '100%', 
-                  border: 'none' 
-                }} 
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }} 
                 allowFullScreen 
                 title={nota.titulo} 
               />
@@ -576,23 +589,6 @@ export default function SeccionCentral({ cambiarPagina, idioma }) {
           <p style={{ color: '#555', lineHeight: '1.8' }}>{nota.contenido}</p>
         </div>
       ))}
-
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </div>
   );
 }
