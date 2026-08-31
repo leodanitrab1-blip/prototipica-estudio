@@ -70,17 +70,68 @@ function App() {
       background: 'linear-gradient(180deg, #ffffff 0%, #fafafa 100%)',
       position: 'relative'
     }}>
+      {/* Barra de idioma superior */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        right: 0,
+        zIndex: 1000,
+        display: 'flex',
+        gap: '8px',
+        padding: '8px 16px',
+        background: 'rgba(255,255,255,0.95)',
+        backdropFilter: 'blur(10px)',
+        borderRadius: '0 0 0 20px',
+        boxShadow: '0 2px 20px rgba(0,0,0,0.1)'
+      }}>
+        <button
+          onClick={() => setIdioma('es')}
+          style={{
+            padding: '6px 12px',
+            border: idioma === 'es' ? '2px solid #1a1a1a' : '2px solid transparent',
+            background: idioma === 'es' ? '#1a1a1a' : 'transparent',
+            color: idioma === 'es' ? 'white' : '#666',
+            borderRadius: '20px',
+            cursor: 'pointer',
+            fontSize: '0.85rem',
+            fontWeight: '600',
+            transition: 'all 0.3s ease',
+            fontFamily: "'Inter', sans-serif"
+          }}
+        >
+          🇲🇽 ES
+        </button>
+        <button
+          onClick={() => setIdioma('en')}
+          style={{
+            padding: '6px 12px',
+            border: idioma === 'en' ? '2px solid #1a1a1a' : '2px solid transparent',
+            background: idioma === 'en' ? '#1a1a1a' : 'transparent',
+            color: idioma === 'en' ? 'white' : '#666',
+            borderRadius: '20px',
+            cursor: 'pointer',
+            fontSize: '0.85rem',
+            fontWeight: '600',
+            transition: 'all 0.3s ease',
+            fontFamily: "'Inter', sans-serif"
+          }}
+        >
+          🇺🇸 EN
+        </button>
+      </div>
+
+      {/* Menú de navegación */}
       <MenuHamburguesa 
         setPaginaActual={cambiarPagina} 
         paginaActual={paginaActual}
         idioma={idioma}
-        setIdioma={setIdioma}
         textos={t}
       />
 
+      {/* Contenido principal con transición */}
       <div 
         style={{ 
-          paddingTop: '70px',
+          paddingTop: '80px',
           opacity: isTransitioning ? 0 : 1,
           transform: isTransitioning ? 'translateY(20px)' : 'translateY(0)',
           transition: 'all 0.3s ease-in-out'
@@ -89,8 +140,10 @@ function App() {
         {renderPagina()}
       </div>
 
+      {/* Asistente IA */}
       <AsistenteIA idioma={idioma} />
 
+      {/* Botón volver arriba */}
       {showScrollTop && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -110,13 +163,23 @@ function App() {
             justifyContent: 'center',
             boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
             transition: 'all 0.3s ease',
-            zIndex: 999
+            zIndex: 999,
+            animation: 'fadeInUp 0.3s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-5px)';
+            e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.4)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.3)';
           }}
         >
           <FiArrowUp size={20} />
         </button>
       )}
 
+      {/* Footer */}
       <footer style={{
         marginTop: '4rem',
         background: 'linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%)',
@@ -125,6 +188,7 @@ function App() {
         position: 'relative',
         overflow: 'hidden'
       }}>
+        {/* Línea decorativa */}
         <div style={{
           position: 'absolute',
           top: 0,
@@ -143,6 +207,7 @@ function App() {
           position: 'relative',
           zIndex: 1
         }}>
+          {/* Logo y descripción */}
           <div>
             <h3 style={{
               fontFamily: "'Playfair Display', serif",
@@ -160,6 +225,7 @@ function App() {
             </p>
           </div>
 
+          {/* Enlaces rápidos */}
           <div>
             <h4 style={{ 
               color: '#c9a96e', 
@@ -184,6 +250,14 @@ function App() {
                       transition: 'all 0.3s ease',
                       fontFamily: "'Inter', sans-serif"
                     }}
+                    onMouseEnter={(e) => {
+                      e.target.style.color = '#c9a96e';
+                      e.target.style.transform = 'translateX(5px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.color = '#999';
+                      e.target.style.transform = 'translateX(0)';
+                    }}
                   >
                     {t[pagina]}
                   </button>
@@ -192,6 +266,7 @@ function App() {
             </ul>
           </div>
 
+          {/* Contacto */}
           <div>
             <h4 style={{ 
               color: '#c9a96e', 
@@ -214,6 +289,7 @@ function App() {
           </div>
         </div>
 
+        {/* Copyright */}
         <div style={{
           maxWidth: '1200px',
           margin: '2rem auto 0',
@@ -231,6 +307,20 @@ function App() {
           </p>
         </div>
       </footer>
+
+      {/* Animaciones */}
+      <style jsx>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }
